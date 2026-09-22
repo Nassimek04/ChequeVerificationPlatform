@@ -1,0 +1,59 @@
+@model ChequeVerification.Web.ViewModels.ManualReviews.ManualReviewQueueViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Contrôles manuels";
+    var headerActions = $"<span class=\"badge bg-warning text-dark\" style=\"font-size:0.85rem;\">{Model.TotalCount} en attente</span>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Title = "Contrôles manuels", Subtitle = "Vérifications nécessitant une décision du contrôleur.", ActionsHtml = headerActions }' />
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success" role="alert">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger" role="alert">@TempData["Error"]</div>
+}
+
+@if (!Model.Items.Any())
+{
+    <div class="card">
+        <div class="card-body">
+            <partial name="_EmptyState" model='"Aucune vérification en attente de contrôle manuel. Les cas où le score IA est dans la zone d\u2019incertitude apparaîtront ici."' />
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead>
+                    <tr>
+                        <th>N° chèque</th>
+                        <th>Client</th>
+                        <th class="num">Score de similarité</th>
+                        <th>Vérifié le</th>
+                        <th><span class="visually-hidden">Action</span></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var item in Model.Items)
+                    {
+                        <tr>
+                            <td>@item.ChequeNumber</td>
+                            <td>@item.CustomerFullName <span class="text-muted small">(@item.CustomerNumber)</span></td>
+                            <td class="num"><span class="badge bg-light text-dark border">@item.SimilarityScore.ToString("P1")</span></td>
+                            <td>@item.VerifiedAt.ToString("g")</td>
+                            <td class="table-actions">
+                                <a asp-action="Review" asp-route-id="@item.VerificationId" class="btn btn-sm btn-warning">Examiner</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <p class="app-meta mt-2">Seules les vérifications en attente d'une décision humaine sont listées ici.</p>
+}

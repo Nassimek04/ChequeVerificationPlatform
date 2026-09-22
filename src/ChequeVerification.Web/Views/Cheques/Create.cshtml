@@ -1,0 +1,63 @@
+@model ChequeVerification.Web.ViewModels.Cheques.ChequeCreateViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Importer un chèque";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Importer un chèque", Subtitle = "Enregistrez un nouveau chèque pour préparer sa vérification." }' />
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="card mb-4">
+        <div class="card-header">Client et référence</div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label asp-for="CustomerId" class="form-label"></label>
+                    <select asp-for="CustomerId" asp-items="Model.Customers" class="form-select">
+                        <option value="">— Sélectionner un client —</option>
+                    </select>
+                    <span asp-validation-for="CustomerId" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="ChequeNumber" class="form-label"></label>
+                    <input asp-for="ChequeNumber" class="form-control" readonly />
+                    <div class="form-text">Numéro généré automatiquement par le système.</div>
+                    <span asp-validation-for="ChequeNumber" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="Amount" class="form-label"></label>
+                    <input asp-for="Amount" class="form-control" />
+                    <span asp-validation-for="Amount" class="text-danger"></span>
+                </div>
+                <div class="col-md-6 mb-3">
+                    <label asp-for="IssueDate" class="form-label"></label>
+                    <input asp-for="IssueDate" class="form-control" type="date" />
+                    <span asp-validation-for="IssueDate" class="text-danger"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header">Image du chèque</div>
+        <div class="card-body">
+            <div class="mb-0">
+                <label asp-for="ImageFile" class="form-label"></label>
+                <input asp-for="ImageFile" class="form-control" type="file" accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
+                <span asp-validation-for="ImageFile" class="text-danger"></span>
+                <div class="form-text">Formats acceptés : .jpg, .jpeg, .png — taille maximale 10 Mo. Choisissez une image nette et complète du chèque.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Importer</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Annuler</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

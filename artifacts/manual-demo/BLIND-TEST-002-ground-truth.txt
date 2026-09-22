@@ -1,0 +1,18 @@
+BLIND TEST 002 GROUND TRUTH - DO NOT SHARE BEFORE MANUAL VERIFICATION
+Cheque: BLIND-TEST-002.png
+Writer ID: 54
+Candidate source filename: forgeries_54_18.png
+Candidate full path: C:\Users\nassime khatib\Downloads\archive\CEDAR\CEDAR\54\forgeries_54_18.png
+Candidate type: FORGED
+Candidate SHA256: 805ea61ccd26fd1731968e69bed9e135034b0d3914df568fc20d96f301c5df74
+References (5 genuine):
+  original_54_12.png SHA256 01575a7538cc62bdd8f0ddd700c2709f44d3d64a006b88a37d58875c3f2869ac
+  original_54_5.png SHA256 93de92b7e02200663f573d09a38679304c655d6d9c0f405e1c10a6646e28a2a2
+  original_54_8.png SHA256 6656bfb5649f11597b2f22c1cfbf832dfd0c4cc994f5514a724e5906321e8b9e
+  original_54_13.png SHA256 db1e3df92916ec2cdb80ddc4f1023fd2fcc61d6581452bf5c57eee92e92de543
+  original_54_18.png SHA256 58b58e6daa7ea6b9edb15bf50ac52af26cadfe8f4e93b7dadd1e3a4775e4b1bf
+Random selection details: writer pool 1-55 excluding [2,7,8,30] -> 51 writers, random.choice -> 54; refs random.sample 5 from 24; candidate 50/50 random.random -> FORGED (is_genuine=False); candidate random.choice from forgeries; no V5, no thresholds
+Selection time: 2026-09-03 10:57:16
+AI used for candidate selection: NO
+Score-based selection: NO
+Thresholds used: NO (L=0.6585 U=0.9150 not used)

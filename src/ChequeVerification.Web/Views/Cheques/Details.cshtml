@@ -1,0 +1,81 @@
+@model ChequeVerification.Web.ViewModels.Cheques.ChequeDetailsViewModel
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Détails du chèque";
+    var headerActions = $"<a class=\"btn btn-outline-secondary\" href=\"{Url.Action("Index", "Cheques")}\">Retour aux chèques</a>"
+        + $" <a class=\"btn btn-outline-primary\" href=\"{Url.Action("Details", "Customers", new { id = Model.CustomerId })}\">Voir la fiche client</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Chèque " + Model.ChequeNumber, Subtitle = "Client " + Model.CustomerFullName + " (" + Model.CustomerNumber + ") — Compte " + Model.AccountNumber, ActionsHtml = headerActions }' />
+
+<div class="card mb-4">
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Numéro du chèque</dt>
+            <dd class="col-sm-9">@Model.ChequeNumber</dd>
+            <dt class="col-sm-3">Client</dt>
+            <dd class="col-sm-9">
+                @Model.CustomerFullName
+                <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId">(@Model.CustomerNumber)</a>
+            </dd>
+            <dt class="col-sm-3">N° client</dt>
+            <dd class="col-sm-9">@Model.CustomerNumber</dd>
+            <dt class="col-sm-3">Compte</dt>
+            <dd class="col-sm-9">@Model.AccountNumber</dd>
+            <dt class="col-sm-3">Montant</dt>
+            <dd class="col-sm-9">@CurrencyDisplayHelper.FormatMad(Model.Amount)</dd>
+            <dt class="col-sm-3">Date d'émission</dt>
+            <dd class="col-sm-9">@(Model.IssueDate?.ToString("d") ?? "—")</dd>
+            <dt class="col-sm-3">Statut</dt>
+            <dd class="col-sm-9">
+                <span class="badge @StatusDisplayHelper.ChequeStatusBadge(Model.Status)">
+                    @StatusDisplayHelper.ChequeStatusLabel(Model.Status)
+                </span>
+            </dd>
+            <dt class="col-sm-3">Importé le</dt>
+            <dd class="col-sm-9">@Model.UploadedAt.ToString("g")</dd>
+            <dt class="col-sm-3">Importé par</dt>
+            <dd class="col-sm-9">@Model.ImportedByFullName</dd>
+            <dt class="col-sm-3">Signature extraite</dt>
+            <dd class="col-sm-9">@(Model.HasExtractedSignature ? "Oui" : "Non")</dd>
+            <dt class="col-sm-3">Vérification</dt>
+            <dd class="col-sm-9">
+                @if (Model.HasVerificationResult)
+                {
+                    <span class="badge bg-success">Disponible</span>
+                    <a asp-controller="Verifications" asp-action="DetailsByCheque" asp-route-chequeId="@Model.ChequeId" class="ms-2">Voir la vérification</a>
+                }
+                else
+                {
+                    <span class="text-muted">Aucune vérification enregistrée</span>
+                }
+            </dd>
+        </dl>
+        <details class="app-tech-details mt-3">
+            <summary>Détails techniques</summary>
+            <dl class="row mb-0 mt-2">
+                <dt class="col-sm-3">Chemin de l'image</dt>
+                <dd class="col-sm-9"><code class="text-break">@Model.ImagePath</code></dd>
+            </dl>
+        </details>
+    </div>
+</div>
+
+@if (Model.ImageIsAccessible)
+{
+    <div class="card">
+        <div class="card-header">Aperçu du chèque</div>
+        <div class="card-body text-center">
+            <img src="@Model.ImagePath" alt="Image du chèque @Model.ChequeNumber" class="img-fluid img-preview" />
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="card-body">
+            <partial name="_EmptyState" model='"Image du chèque indisponible sur le serveur."' />
+        </div>
+    </div>
+}

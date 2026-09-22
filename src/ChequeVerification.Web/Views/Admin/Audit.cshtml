@@ -1,0 +1,74 @@
+@model ChequeVerification.Web.ViewModels.Admin.AdminAuditListViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Journal d'audit";
+    var headerActions = $"<a class=\"btn btn-sm btn-outline-secondary\" href=\"{Url.Action("Index", "Admin")}\">Retour à l'administration</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Supervision", Title = "Journal d\u2019audit", Subtitle = "Événements enregistrés par l\u2019application, les plus récents d\u2019abord.", ActionsHtml = headerActions }' />
+
+<div class="card">
+    <div class="card-header bg-white">
+        <h2 class="h6 mb-0">Événements (@Model.TotalCount)</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Utilisateur</th>
+                    <th>Action</th>
+                    <th>Entité</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Any())
+                {
+                    foreach (var a in Model.Items)
+                    {
+                        <tr>
+                            <td class="cell-date">@a.CreatedAt.ToString("g")</td>
+                            <td class="audit-user">@(a.UserName ?? "—")</td>
+                            <td>
+                                <span class="audit-action-label">@AuditActionLabels.Label(a.Action)</span>
+                                @if (!string.Equals(AuditActionLabels.Label(a.Action), a.Action, StringComparison.Ordinal))
+                                {
+                                    <div class="audit-raw-code"><code>@a.Action</code>@(a.EntityId.HasValue ? $" #{a.EntityId}" : string.Empty)</div>
+                                }
+                                else if (a.EntityId.HasValue)
+                                {
+                                    <div class="audit-raw-code">#@a.EntityId</div>
+                                }
+                            </td>
+                            <td class="text-secondary-info">@a.EntityName</td>
+                            <td class="small">@(a.Description ?? "—")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="5" class="app-empty">Aucune entrée d'audit.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+            <span class="text-muted">Page @Model.Page sur @Model.TotalPages</span>
+            <div>
+                @if (Model.Page > 1)
+                {
+                    <a asp-action="Audit" asp-route-page="@(Model.Page - 1)" class="btn btn-sm btn-outline-secondary">Précédent</a>
+                }
+                @if (Model.Page < Model.TotalPages)
+                {
+                    <a asp-action="Audit" asp-route-page="@(Model.Page + 1)" class="btn btn-sm btn-outline-secondary">Suivant</a>
+                }
+            </div>
+        </div>
+    }
+</div>

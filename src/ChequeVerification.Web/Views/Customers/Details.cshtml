@@ -1,0 +1,169 @@
+@model ChequeVerification.Web.ViewModels.Customers.CustomerDetailViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Détails client";
+    var headerActions = $"<a class=\"btn btn-outline-secondary\" href=\"{Url.Action("Index", "Customers")}\">Retour aux clients</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Fiche client", Subtitle = "Informations, chèques et signatures de référence.", ActionsHtml = headerActions }' />
+
+<div class="card mb-4">
+    <div class="card-body">
+        <h2 class="h5 mb-1">@Model.Customer.FullName</h2>
+        <p class="app-meta mb-3">Client @Model.Customer.CustomerNumber · Compte @Model.Customer.AccountNumber</p>
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Numéro client</dt>
+            <dd class="col-sm-9">@Model.Customer.CustomerNumber</dd>
+            <dt class="col-sm-3">Nom complet</dt>
+            <dd class="col-sm-9">@Model.Customer.FullName</dd>
+            <dt class="col-sm-3">Numéro de compte</dt>
+            <dd class="col-sm-9">@Model.Customer.AccountNumber</dd>
+            <dt class="col-sm-3">N° pièce d'identité</dt>
+            <dd class="col-sm-9">@(Model.Customer.NationalId ?? "—")</dd>
+            <dt class="col-sm-3">Téléphone</dt>
+            <dd class="col-sm-9">@(Model.Customer.Phone ?? "—")</dd>
+            <dt class="col-sm-3">Email</dt>
+            <dd class="col-sm-9">@(Model.Customer.Email ?? "—")</dd>
+            <dt class="col-sm-3">Client depuis</dt>
+            <dd class="col-sm-9">@Model.Customer.CreatedAt.ToString("d")</dd>
+            <dt class="col-sm-3">Chèques</dt>
+            <dd class="col-sm-9"><span class="badge bg-light text-dark">@Model.ChequeCount</span></dd>
+            <dt class="col-sm-3">Signatures de référence</dt>
+            <dd class="col-sm-9"><span class="badge bg-light text-dark">@Model.ReferenceSignatureCount</span></dd>
+        </dl>
+    </div>
+</div>
+
+<h2 class="h5 mb-3">Chèques du client</h2>
+<div class="card mb-4">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>N° chèque</th>
+                    <th class="num">Montant</th>
+                    <th>Date d'émission</th>
+                    <th>Statut</th>
+                    <th>Importé le</th>
+                    <th><span class="visually-hidden">Action</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Cheques.Any())
+                {
+                    foreach (var ch in Model.Cheques)
+                    {
+                        <tr>
+                            <td>@ch.ChequeNumber</td>
+                            <td class="num">@ChequeVerification.Web.ViewModels.Dashboard.CurrencyDisplayHelper.FormatMad(ch.Amount)</td>
+                            <td>@(ch.IssueDate?.ToString("d") ?? "—")</td>
+                            <td>
+                                <span class="badge @ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.ChequeStatusBadge(ch.Status)">
+                                    @ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.ChequeStatusLabel(ch.Status)
+                                </span>
+                            </td>
+                            <td>@ch.UploadedAt.ToString("g")</td>
+                            <td class="table-actions">
+                                <a asp-controller="Cheques" asp-action="Details" asp-route-id="@ch.ChequeId" class="btn btn-sm btn-outline-primary">Détails</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="6" class="app-empty">Aucun chèque pour ce client.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@{
+    var activeCount = Model.ReferenceSignatures.Count(r => r.IsActive);
+    var recommendedTarget = 5;
+    var isAdmin = User.IsInRole("Administrateur");
+}
+<h2 class="h5 mb-3">Signatures de référence</h2>
+
+<div class="card mb-3">
+    <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+            <span class="text-muted">Signatures actives :</span>
+            <span class="badge @(activeCount >= 5 ? "bg-success" : activeCount >= 1 ? "bg-warning text-dark" : "bg-secondary")">
+                @activeCount / @recommendedTarget
+            </span>
+            @if (activeCount == 0)
+            {
+                <span class="text-muted small ms-2">Au moins 1 requise pour la vérification.</span>
+            }
+            else if (activeCount < 5)
+            {
+                <span class="text-muted small ms-2">5 recommandées pour une comparaison plus stable.</span>
+            }
+            else
+            {
+                <span class="text-success small ms-2">Nombre recommandé de signatures actives atteint.</span>
+            }
+        </div>
+        @if (isAdmin)
+        {
+            @if (activeCount >= 5)
+            {
+                <span class="btn btn-outline-secondary btn-sm disabled" title="Maximum atteint">Ajouter une signature de référence</span>
+            }
+            else
+            {
+                <a asp-controller="ReferenceSignatures" asp-action="Create" asp-route-customerId="@Model.Customer.CustomerId" class="btn btn-primary btn-sm">Ajouter une signature de référence</a>
+            }
+        }
+    </div>
+</div>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Signature</th>
+                    <th>Aperçu</th>
+                    <th>État</th>
+                    <th>Créée le</th>
+                    <th><span class="visually-hidden">Action</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.ReferenceSignatures.Any())
+                {
+                    foreach (var r in Model.ReferenceSignatures)
+                    {
+                        <tr>
+                            <td>#@r.ReferenceSignatureId</td>
+                            <td>
+                                <img src="@r.ImagePath" alt="Signature de référence #@r.ReferenceSignatureId" class="img-thumb"
+                                     onerror="this.style.display='none';this.nextElementSibling.style.display='inline';" /><span class="text-muted small" style="display:none;">Aperçu indisponible</span>
+                            </td>
+                            <td>
+                                @if (r.IsActive)
+                                {
+                                    <span class="badge bg-success">Active</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactive</span>
+                                }
+                            </td>
+                            <td>@r.CreatedAt.ToString("g")</td>
+                            <td class="table-actions">
+                                <a asp-controller="ReferenceSignatures" asp-action="Details" asp-route-id="@r.ReferenceSignatureId" class="btn btn-sm btn-outline-primary">Détails</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr><td colspan="5" class="app-empty">Aucune signature de référence.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

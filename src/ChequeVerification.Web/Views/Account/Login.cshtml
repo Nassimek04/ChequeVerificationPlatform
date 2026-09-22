@@ -1,0 +1,115 @@
+@model ChequeVerification.Web.ViewModels.LoginViewModel
+@{
+    ViewData["Title"] = "Connexion";
+}
+
+<div class="auth-stage">
+    <p class="auth-peripheral auth-peripheral-top" aria-hidden="true">
+        <span>Sécurité&nbsp;&nbsp;·&nbsp;&nbsp;Conformité&nbsp;&nbsp;·&nbsp;&nbsp;Fiabilité</span>
+        <span class="auth-peripheral-rule"></span>
+    </p>
+    <div class="auth-peripheral auth-peripheral-side" aria-hidden="true"></div>
+    <p class="auth-peripheral auth-peripheral-bottom-left" aria-hidden="true">Doc’archives&nbsp;&nbsp;·&nbsp;&nbsp;Vérification&nbsp;&nbsp;·&nbsp;&nbsp;Conformité&nbsp;&nbsp;·&nbsp;&nbsp;Confiance</p>
+    <p class="auth-peripheral auth-peripheral-bottom-right" aria-hidden="true">
+        <span class="auth-peripheral-rule"></span>
+        <span>L’expertise documentaire<br />au service de vos opérations</span>
+    </p>
+
+    <div class="auth-panel">
+    <div class="auth-identity">
+        <div class="auth-identity-main">
+            <div class="auth-rule" aria-hidden="true"></div>
+            <p class="auth-tagline">Plateforme de contrôle<br />et de conformité</p>
+            <h2>Vérification de chèques</h2>
+            <div class="auth-rule" aria-hidden="true"></div>
+            <p class="auth-lead">Analyse et contrôle des signatures pour accompagner la vérification des chèques.</p>
+        </div>
+        <ul class="auth-identity-indicators">
+            <li>Accès sécurisé</li>
+            <li>Utilisateurs autorisés</li>
+            <li>Intégrité des données</li>
+        </ul>
+    </div>
+
+    <div class="auth-form">
+        <div class="auth-form-brand">
+            <img class="auth-brand-logo" src="~/images/docarchives-logo.png" alt="DocArchives"
+                 onerror="this.style.display='none'" />
+        </div>
+        <div class="auth-rule" aria-hidden="true"></div>
+        <p class="auth-form-eyebrow">Espace sécurisé</p>
+        <h1>Connexion</h1>
+        <p class="text-muted auth-form-subtitle">Connectez-vous à votre espace de travail.</p>
+
+        @if (!ViewData.ModelState.IsValid && ViewData.ModelState[string.Empty]?.Errors.Count > 0)
+        {
+            <div class="alert alert-danger" role="alert">
+                @ViewData.ModelState[string.Empty]?.Errors.FirstOrDefault()?.ErrorMessage
+            </div>
+        }
+
+        <form asp-action="Login" method="post" role="form">
+            <div asp-validation-summary="ModelOnly" class="text-danger d-none"></div>
+            <input type="hidden" asp-for="ReturnUrl" />
+
+            <div class="mb-3">
+                <label asp-for="Email" class="form-label"></label>
+                <input asp-for="Email" class="form-control" placeholder="nom@exemple.com" autocomplete="username" autofocus />
+                <span asp-validation-for="Email" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Password" class="form-label"></label>
+                <div class="password-wrapper">
+                    <input asp-for="Password" class="form-control" placeholder="••••••••" autocomplete="current-password" />
+                    <button type="button" id="passwordToggle" class="password-toggle" aria-label="Afficher le mot de passe" aria-pressed="false">
+                        <svg data-icon="eye" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
+                            <circle cx="12" cy="12" r="3" />
+                        </svg>
+                        <svg data-icon="eye-off" class="is-hidden" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
+                            <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
+                            <path d="M14.12 14.12a3 3 0 1 1-4.24-4.24" />
+                            <line x1="1" y1="23" x2="23" y2="1" />
+                        </svg>
+                    </button>
+                </div>
+                <span asp-validation-for="Password" class="text-danger"></span>
+            </div>
+
+            <div class="form-check mb-3">
+                <input asp-for="RememberMe" class="form-check-input" />
+                <label asp-for="RememberMe" class="form-check-label"></label>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100">Se connecter</button>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            var toggle = document.getElementById('passwordToggle');
+            var input = document.getElementById('Password');
+            if (!toggle || !input) {
+                return;
+            }
+            var eye = toggle.querySelector('[data-icon="eye"]');
+            var eyeOff = toggle.querySelector('[data-icon="eye-off"]');
+            toggle.addEventListener('click', function () {
+                var show = input.type === 'password';
+                input.type = show ? 'text' : 'password';
+                toggle.setAttribute('aria-pressed', show ? 'true' : 'false');
+                toggle.setAttribute('aria-label', show ? 'Masquer le mot de passe' : 'Afficher le mot de passe');
+                if (eye && eyeOff) {
+                    eye.classList.toggle('is-hidden', show);
+                    eyeOff.classList.toggle('is-hidden', !show);
+                }
+                input.focus({ preventScroll: true });
+            });
+        })();
+    </script>
+}
+</div>

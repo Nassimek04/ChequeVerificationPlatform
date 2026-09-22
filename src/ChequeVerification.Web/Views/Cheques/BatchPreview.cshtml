@@ -1,0 +1,149 @@
+@model ChequeVerification.Web.ViewModels.Cheques.BatchImportPreviewViewModel
+@using ChequeVerification.Web.ViewModels.Cheques
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Prévisualisation de l'import";
+}
+
+<style>
+    /* Scoped BatchPreview overflow fix (no global CSS change):
+       the project rule ".card > .table-responsive { overflow: hidden }"
+       (site.css, rounded card corners) disables Bootstrap's horizontal
+       scroll. This restores it for this page only. */
+    .card > .table-responsive.batch-preview-scroll {
+        overflow-x: auto;
+    }
+
+    /* Floor width so narrow screens scroll instead of squeezing columns. */
+    .batch-preview-scroll > table.batch-preview-table {
+        min-width: 1200px;
+    }
+
+    /* Long spaceless tokens (CMC7 brut) and validation messages wrap
+       instead of forcing extreme width. Never ellipsis-truncated. */
+    .batch-preview-table .batch-preview-breakable {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+        min-width: 11rem;
+    }
+</style>
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Prévisualisation de l\u2019import", Subtitle = $"{Model.ReadyCount} ligne(s) prête(s) sur {Model.TotalSelected}. Corrigez les montants si besoin, puis confirmez." }' />
+
+<form asp-action="ConfirmBatchImport" method="post">
+    @Html.AntiForgeryToken()
+
+    <div class="card">
+        <div class="table-responsive batch-preview-scroll">
+            <table class="table table-hover mb-0 batch-preview-table">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>CMC7 brut</th>
+                        <th>N° chèque CMC7</th>
+                        <th>N° compte CMC7</th>
+                        <th>N° chèque</th>
+                        <th>N° compte détecté</th>
+                        <th>Client correspondant</th>
+                        <th>Montant détecté</th>
+                        <th>Cohérence</th>
+                        <th>Statut</th>
+                        <th>Message</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @for (var i = 0; i < Model.Rows.Count; i++)
+                    {
+                        var r = Model.Rows[i];
+                        var badge = r.IsInsertable ? "bg-success" : "bg-warning text-dark";
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(r.ImageUrl))
+                                {
+                                    <img src="@r.ImageUrl" alt="Chèque @r.OriginalFileName" style="max-width: 120px; max-height: 80px;" class="img-thumbnail" />
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                                <div class="small text-muted">@r.OriginalFileName</div>
+                            </td>
+                            <td class="record-secondary small batch-preview-breakable">
+                                @if (!string.IsNullOrEmpty(r.Cmc7Raw))
+                                {
+                                    <div title="@r.Cmc7Raw">@r.Cmc7Raw</div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td class="record-id">@(r.Cmc7Cheque ?? "—")</td>
+                            <td class="record-secondary">@(r.Cmc7Account ?? "—")</td>
+                            <td class="record-id">
+                                @(r.ChequeNumber ?? "—")
+                                @if (r.MappingSource == BatchImportSources.Cmc7)
+                                {
+                                    <span class="badge bg-info text-dark ms-1">CMC7</span>
+                                }
+                            </td>
+                            <td class="record-secondary">@(r.AccountNumber ?? "—")</td>
+                            <td>
+                                @if (r.CustomerId.HasValue)
+                                {
+                                    <span class="record-primary">@r.CustomerFullName</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td>
+                                @if (r.Amount.HasValue)
+                                {
+                                    <span>@CurrencyDisplayHelper.FormatMad(r.Amount)</span>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                                @if (r.IsInsertable || r.Status == BatchImportRowStatuses.MontantAVerifier)
+                                {
+                                    <input type="text" name="Rows[@i].CorrectedAmount" value="@r.AmountEdit"
+                                           class="form-control form-control-sm mt-1" placeholder="Corriger (ex. 12 500,00)" />
+                                }
+                            </td>
+                            <td class="record-secondary small">
+                                @if (!string.IsNullOrEmpty(r.CrossCheck) || !string.IsNullOrEmpty(r.PrintedCheque) || !string.IsNullOrEmpty(r.PrintedAccount))
+                                {
+                                    <div>Imprimé chèque : @(r.PrintedCheque ?? "—")</div>
+                                    <div>Imprimé compte : @(r.PrintedAccount ?? "—")</div>
+                                    <div>Contrôle : @(r.CrossCheck ?? "—")</div>
+                                }
+                                else
+                                {
+                                    <span class="text-muted">—</span>
+                                }
+                            </td>
+                            <td><span class="badge @badge">@r.StatusLabel</span></td>
+                            <td class="record-secondary batch-preview-breakable">@r.Message</td>
+                        </tr>
+                        <input type="hidden" name="Rows[@i].TempToken" value="@r.TempToken" />
+                        <input type="hidden" name="Rows[@i].OriginalFileName" value="@r.OriginalFileName" />
+                        <input type="hidden" name="Rows[@i].MappingSource" value="@r.MappingSource" />
+                        <input type="hidden" name="Rows[@i].ChequeNumber" value="@r.ChequeNumber" />
+                        <input type="hidden" name="Rows[@i].AccountNumber" value="@r.AccountNumber" />
+                        <input type="hidden" name="Rows[@i].OcrAmount" value="@(r.Amount.HasValue ? r.Amount.Value.ToString(System.Globalization.CultureInfo.InvariantCulture) : string.Empty)" />
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2 mt-3">
+        <button type="submit" class="btn btn-primary" @(Model.ReadyCount == 0 && !Model.Rows.Any(r => r.Status == BatchImportRowStatuses.MontantAVerifier) ? "disabled" : "")>Confirmer l'import</button>
+        <a asp-action="BatchImport" class="btn btn-outline-secondary">Recommencer</a>
+        <a asp-action="Index" class="btn btn-outline-secondary">Annuler</a>
+    </div>
+</form>

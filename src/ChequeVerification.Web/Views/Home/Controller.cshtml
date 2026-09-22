@@ -1,0 +1,118 @@
+@model ChequeVerification.Web.ViewModels.Dashboard.ControllerDashboardViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Tableau de bord";
+    var headerActions = $"<a class=\"btn btn-primary\" href=\"{Url.Action("Queue", "ManualReviews")}\">Contrôles manuels</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Contrôle", Title = "Tableau de bord du contrôleur", Subtitle = "Dossiers en attente de décision et activité de contrôle.", ActionsHtml = headerActions }' />
+
+<div class="row">
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "En attente de contrôle", Value = Model.PendingReviewCount.ToString(), AccentColor = "#f59e0b" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Dossiers finalisés", Value = Model.RecentDecisionsCount.ToString(), AccentColor = "#2f6fdb" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Conformes", Value = Model.ValidatedCount.ToString(), AccentColor = "#12b76a" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Non conformes", Value = Model.RejectedCount.ToString(), AccentColor = "#ef4444" }' />
+</div>
+
+<div class="row app-dashboard-grid">
+    <div class="col-lg-8 mb-4">
+        <div class="dash-card h-100">
+            <div class="dash-card-head">
+                <div class="queue-hero">
+                    <span class="queue-hero-count">@Model.PendingReviewCount</span>
+                    <div>
+                        <h2 class="dash-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            Contrôles à examiner
+                        </h2>
+                        <p class="dash-card-meta">Dossiers en attente de votre décision.</p>
+                    </div>
+                </div>
+                <a class="dash-card-link" asp-controller="ManualReviews" asp-action="Queue">File complète &rarr;</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>N° chèque</th>
+                            <th>Client</th>
+                            <th class="num">Score IA</th>
+                            <th>État</th>
+                            <th><span class="visually-hidden">Action</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.LatestVerificationsToReview.Any())
+                        {
+                            foreach (var v in Model.LatestVerificationsToReview)
+                            {
+                                <tr>
+                                    <td class="record-id">@v.ChequeNumber</td>
+                                    <td><span class="record-primary">@v.CustomerName</span><br /><span class="record-secondary">@v.VerifiedAt.ToString("g")</span></td>
+                                    <td class="num"><span class="score-chip">@v.SimilarityScore.ToString("P1")</span></td>
+                                    <td>
+                                        <span class="badge @ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.VerificationDecisionBadge(v.AutomaticDecision)">
+                                            @ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.VerificationDecisionLabel(v.AutomaticDecision)
+                                        </span>
+                                        <div><span class="badge bg-warning text-dark mt-1">En attente</span></div>
+                                    </td>
+                                    <td class="table-actions">
+                                        <a asp-controller="ManualReviews" asp-action="Review" asp-route-id="@v.VerificationId" class="btn btn-sm btn-warning">Examiner</a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="5" class="app-empty">Aucun contrôle en attente. La file est à jour.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-4 mb-4">
+        <div class="dash-card h-100">
+            <div class="dash-card-head">
+                <div>
+                        <h2 class="dash-card-title">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                            Décisions finales
+                        </h2>
+                        <p class="dash-card-meta">Décisions finales enregistrées, automatiques ou après contrôle.</p>
+                        @if (Model.ManualReviewCompletedCount > 0)
+                        {
+                            <p class="dash-card-meta">@(Model.ManualReviewCompletedCount == 1 ? "1 dossier a fait l'objet d'un contrôle manuel." : $"{Model.ManualReviewCompletedCount} dossiers ont fait l'objet d'un contrôle manuel.")</p>
+                        }
+                </div>
+            </div>
+            <div class="dash-card-body">
+                @if (Model.ControlDecisions.Total > 0)
+                {
+                    <div class="dash-chart-sm">
+                        <canvas data-chart="donut"
+                                data-conforme="@Model.ControlDecisions.Conforme"
+                                data-manuel="@Model.ControlDecisions.ControleManuel"
+                                data-nonconforme="@Model.ControlDecisions.NonConforme"
+                                role="img" aria-label="Répartition de vos décisions de contrôle"></canvas>
+                    </div>
+                    <ul class="dash-legend">
+                        <li><span class="swatch" style="background:#16a34a;" aria-hidden="true"></span><span class="legend-label">Conforme</span><span class="legend-count">@Model.ControlDecisions.Conforme</span></li>
+                        <li><span class="swatch" style="background:#c0362c;" aria-hidden="true"></span><span class="legend-label">Non conforme</span><span class="legend-count">@Model.ControlDecisions.NonConforme</span></li>
+                    </ul>
+                }
+                else
+                {
+                    <p class="dash-empty">Aucune décision enregistrée pour l'instant.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chart.js/chart.umd.min.js"></script>
+    <script src="~/js/dashboard-charts.js" asp-append-version="true"></script>
+}

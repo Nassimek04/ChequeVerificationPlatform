@@ -1,0 +1,75 @@
+@model ChequeVerification.Web.ViewModels.ReferenceSignatures.ReferenceSignatureCreateViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Enrôler une signature de référence";
+    var headerActions = $"<a class=\"btn btn-outline-secondary\" href=\"{Url.Action("Details", "Customers", new { id = Model.CustomerId })}\">Retour à la fiche client</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Title = "Enrôler une signature de référence", Subtitle = "Client " + Model.CustomerFullName + " (" + Model.CustomerNumber + ")", ActionsHtml = headerActions }' />
+
+<div class="card mb-4">
+    <div class="card-body d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div>
+            <span class="text-muted">Signatures actives :</span>
+            <span class="badge @(Model.ActiveReferenceCount >= 5 ? "bg-success" : Model.ActiveReferenceCount >= 1 ? "bg-warning text-dark" : "bg-secondary")">
+                @Model.ActiveReferenceCount / @Model.RecommendedTarget
+            </span>
+            @if (Model.ActiveReferenceCount >= 5)
+            {
+                <span class="text-success small ms-2">Nombre recommandé de signatures actives atteint.</span>
+            }
+            else if (Model.ActiveReferenceCount == 0)
+            {
+                <span class="text-muted small ms-2">Au moins 1 signature active est requise pour la vérification.</span>
+            }
+            else
+            {
+                <span class="text-muted small ms-2">5 signatures recommandées pour une comparaison multi-référence plus stable.</span>
+            }
+        </div>
+    </div>
+</div>
+
+<form asp-action="Create" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <input type="hidden" asp-for="CustomerId" />
+
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="card mb-4">
+        <div class="card-header">
+            Fichier de la signature
+        </div>
+        <div class="card-body">
+            <div class="mb-3">
+                <label asp-for="ImageFile" class="form-label"></label>
+                <input asp-for="ImageFile" class="form-control" type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" />
+                <span asp-validation-for="ImageFile" class="text-danger"></span>
+                <div class="form-text">Formats acceptés : PNG, JPEG (.png, .jpg, .jpeg) — taille maximale 5 Mo. La validation vérifie aussi les magic bytes.</div>
+            </div>
+
+            @if (Model.ActiveReferenceCount >= 5)
+            {
+                <div class="alert alert-warning small mb-0" role="alert">
+                    Le client possède déjà 5 signatures de référence actives. L'enrôlement est désactivé.
+                </div>
+            }
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        @if (Model.ActiveReferenceCount >= 5)
+        {
+            <button type="submit" class="btn btn-primary" disabled>Enrôler</button>
+        }
+        else
+        {
+            <button type="submit" class="btn btn-primary">Enrôler</button>
+        }
+        <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId" class="btn btn-outline-secondary">Annuler</a>
+    </div>
+</form>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

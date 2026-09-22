@@ -1,0 +1,18 @@
+# AI V2 signature-verification runtime dependencies (production inference).
+# Pinned to the exact versions validated on the internship machine.
+#
+# IMPORTANT (Windows / PyTorch):
+#   The default PyPI torch wheel (CUDA 12.8 build) was BLOCKED by Windows
+#   application control on this machine. The pinned wheels below are the ones
+#   that install and run correctly (torch 2.8.0+cu128 supports the RTX 5070 Ti
+#   / sm_120). Install them from the official PyTorch cu128 index:
+#
+#   pip install -r requirements-ai.txt --index-url https://download.pytorch.org/whl/cu128
+#
+#   Do NOT install a newer/other wheel blindly; it may be blocked or broken.
+#   CUDA is OPTIONAL at runtime: set SIGNATURE_AI_DEVICE=cpu or "auto" and the
+#   service runs on CPU. If torch is not installed at all, the app still starts
+#   and only the AI endpoint reports "unavailable".
+torch==2.8.0+cu128
+torchvision==0.23.0+cu128
+numpy==2.2.6

@@ -1,0 +1,61 @@
+@model ChequeVerification.Web.ViewModels.Admin.AdminUserListViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Utilisateurs";
+    var headerActions = $"<a class=\"btn btn-sm btn-outline-secondary\" href=\"{Url.Action("Index", "Admin")}\">Retour à l'administration</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Supervision", Title = "Utilisateurs", Subtitle = "Comptes de l\u2019application — consultation en lecture seule.", ActionsHtml = headerActions }' />
+
+<div class="card">
+    <div class="card-header bg-white">
+        <h2 class="h6 mb-0">Comptes enregistrés (@Model.TotalCount)</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Nom</th>
+                    <th>Email</th>
+                    <th>Rôle</th>
+                    <th>Statut</th>
+                    <th>Créé le</th>
+                    <th>Dernière connexion</th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Any())
+                {
+                    foreach (var u in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-secondary-info cell-num">@u.UserId</td>
+                            <td class="record-primary">@u.FullName</td>
+                            <td>@u.Email</td>
+                            <td><span class="badge bg-light text-dark border">@u.RoleName</span></td>
+                            <td>
+                                @if (u.IsActive)
+                                {
+                                    <span class="badge bg-success">Actif</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-secondary">Inactif</span>
+                                }
+                            </td>
+                            <td class="cell-date">@u.CreatedAt.ToString("g")</td>
+                            <td class="cell-date">@(u.LastLogin?.ToString("g") ?? "—")</td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="7" class="app-empty">Aucun utilisateur enregistré.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

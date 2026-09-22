@@ -1,0 +1,1230 @@
+﻿@model ChequeVerification.Web.ViewModels.Verifications.VerificationCreateViewModel
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Nouvelle vérification";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Vérification", Title = "Nouvelle vérification", Subtitle = "Sélectionnez un chèque en attente, puis lancez la vérification automatique." }' />
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success" role="alert">@TempData["Success"]</div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger" role="alert">@TempData["Error"]</div>
+}
+
+<div class="verify-wrap">
+<div class="service-strip">
+    <span class="text-muted">Service d'analyse</span>
+    @if (Model.AnalysisServiceAvailable)
+    {
+        <span class="service-dot ok" aria-hidden="true"></span>
+        <span class="badge bg-success">Disponible</span>
+    }
+    else
+    {
+        <span class="service-dot ko" aria-hidden="true"></span>
+        <span class="badge bg-danger">Indisponible</span>
+        <span class="text-muted small">L'extraction et la vérification nécessitent le service d'analyse.</span>
+    }
+</div>
+
+@if (Model.Preparation == null)
+{
+@if (Model.AvailableCheques.Any())
+{
+<div class="verify-unit">
+<form method="get" asp-action="Create" class="mb-4">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start gap-3 verify-step-head">
+                <span class="step-num" aria-hidden="true">1</span>
+                <div class="flex-grow-1">
+                    <h2 class="h6 mb-1">Sélection du chèque</h2>
+                    <p class="app-meta small mt-0 mb-3">Sélectionnez un chèque pour préparer une vérification.</p>
+                    <div class="row align-items-end g-3 verify-operation">
+                        <div class="col-md-7">
+                            <label for="chequeId" class="form-label">Chèque à vérifier</label>
+                            <select id="chequeId" name="chequeId" class="form-select">
+                                <option value="">— Sélectionner un chèque —</option>
+                                @foreach (var c in Model.AvailableCheques)
+                                {
+                                    <option value="@c.ChequeId" selected="@(Model.SelectedChequeId == c.ChequeId)">
+                                        @c.ChequeNumber — @c.CustomerFullName (@c.CustomerNumber)
+                                    </option>
+                                }
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <button type="submit" class="btn btn-primary">Préparer l'analyse →</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+</div>
+}
+else
+{
+<div class="verify-unit">
+    <div class="card">
+        <div class="card-body">
+            <div class="d-flex align-items-start gap-3 verify-step-head">
+                <span class="step-num" aria-hidden="true">1</span>
+                <div class="flex-grow-1">
+                    <h2 class="h6 mb-2">Sélection du chèque</h2>
+                    <partial name="_EmptyState" model='"Aucun chèque en attente de vérification."' />
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+}
+}
+</div>
+
+@if (Model.Preparation != null)
+{
+    var prep = Model.Preparation;
+    var verified = prep.HasExistingVerification;
+    var justExtracted = Model.SignatureExtraction?.Success == true;
+    var hasEvidence = prep.HasExtractedSignature || justExtracted;
+    var svcAvailable = Model.AnalysisServiceAvailable;
+    var activeRefCount = prep.ReferenceSignatures.Count(r => r.IsActive);
+    // Eligibility gate reusing the existing business rule: only advance past
+    // Selection when the backend itself allows verification to start.
+    var gatePassed = (prep.CanStartVerification && svcAvailable) || hasEvidence || verified;
+    string eligibilityMessage;
+    if (!svcAvailable && !hasEvidence && !verified)
+    {
+        eligibilityMessage = "Service d'analyse indisponible. L'extraction et la vérification seront disponibles lorsque le service sera connecté.";
+    }
+    else if (activeRefCount == 0)
+    {
+        eligibilityMessage = "Le client associé ne dispose d'aucune signature de référence active. 5 signatures de référence actives sont requises pour lancer la vérification.";
+    }
+    else if (activeRefCount != 5)
+    {
+        eligibilityMessage = "Le client associé ne dispose pas des 5 signatures de référence actives requises.";
+    }
+    else
+    {
+        eligibilityMessage = prep.BlockingReason ?? "5 signatures de référence actives sont requises pour lancer la vérification.";
+    }
+
+    <div class="card mb-3 case-summary">
+        <div class="card-body py-3">
+            <div class="d-flex align-items-start gap-3 flex-wrap">
+                @if (prep.ImageIsAccessible)
+                {
+                    <img src="@prep.ImagePath" alt="Aperçu du chèque @prep.ChequeNumber" class="case-summary-thumb" />
+                }
+                <div class="flex-grow-1">
+                    <p class="case-summary-eyebrow">✓ Chèque sélectionné</p>
+                    <p class="mb-1"><span class="record-id">@prep.ChequeNumber</span> <span class="record-secondary ms-2">@prep.CustomerFullName · @prep.CustomerNumber</span></p>
+                    <p class="app-meta small mb-0">@prep.AccountNumber · @CurrencyDisplayHelper.FormatMad(prep.Amount) · <span class="badge @StatusDisplayHelper.ChequeStatusBadge(prep.Status)">@StatusDisplayHelper.ChequeStatusLabel(prep.Status)</span></p>
+                </div>
+                <a asp-action="Create" class="btn btn-sm btn-outline-secondary align-self-center">Changer de chèque</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-body py-3">
+            @{
+                var stepSelection = gatePassed ? "done" : "current";
+                var stepAnalyse = verified || hasEvidence ? "done" : (gatePassed ? "current" : "upcoming");
+                var stepExtraction = verified || hasEvidence ? "done" : "upcoming";
+                var stepComparison = verified ? "done" : (hasEvidence ? "current" : "upcoming");
+                var stepDecision = verified ? "done" : "upcoming";
+            }
+            <ol class="wf-rail wf-rail-5 mb-0" aria-label="Étapes exécutées automatiquement par le système">
+                <li class="@stepSelection"><span class="wf-node" aria-hidden="true">@(gatePassed ? "✓" : "1")</span><span class="wf-label">Sélection<small>@prep.ChequeNumber</small></span></li>
+                <li class="@stepAnalyse"><span class="wf-node" aria-hidden="true">@(verified || hasEvidence ? "✓" : "2")</span><span class="wf-label">Analyse<small>Image + OCR</small></span></li>
+                <li class="@stepExtraction"><span class="wf-node" aria-hidden="true">@(verified || hasEvidence ? "✓" : "3")</span><span class="wf-label">Extraction<small>@(verified || hasEvidence ? "Signature extraite" : "OpenCV V2.4")</small></span></li>
+                <li class="@stepComparison"><span class="wf-node" aria-hidden="true">@(verified ? "✓" : "4")</span><span class="wf-label">Comparaison<small>@(activeRefCount == 5 || verified ? "K = 5 références" : "Références incomplètes")</small></span></li>
+                <li class="@stepDecision"><span class="wf-node" aria-hidden="true">@(verified ? "✓" : "5")</span><span class="wf-label">Décision<small>Conforme / Manuel / Non conforme</small></span></li>
+            </ol>
+            <p class="app-meta small mb-0 mt-2">Analyse → Extraction → Comparaison → Décision : étapes exécutées automatiquement par le système, sans lancement manuel.</p>
+        </div>
+    </div>
+
+    @if (verified)
+    {
+        <div class="card mb-4">
+            <div class="card-body d-flex align-items-center gap-3 flex-wrap">
+                <span class="badge bg-light text-dark border">Vérification déjà effectuée</span>
+                <span class="app-meta small">@prep.BlockingReason</span>
+                <a asp-action="DetailsByCheque" asp-route-chequeId="@prep.ChequeId" class="btn btn-primary btn-sm ms-auto">Voir le résultat →</a>
+            </div>
+        </div>
+    }
+
+    @if (!verified && (prep.CanStartVerification && svcAvailable || hasEvidence))
+    {
+        var ocrDone = Model.ChequeOcr?.Success == true;
+        var ocrFailed = Model.ChequeOcr != null && !Model.ChequeOcr.Success;
+        var imgDone = Model.ImageTest?.Success == true;
+        <div class="card mb-4 workstation-stage" id="etape-analyse">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <span><span class="step-eyebrow">Étape 2</span> — Analyse du chèque</span>
+                @if (ocrDone)
+                {
+                    <span class="badge bg-success">OCR terminée</span>
+                }
+                else if (imgDone)
+                {
+                    <span class="badge bg-light text-dark border">Image analysée</span>
+                }
+                else
+                {
+                    <span class="badge bg-light text-dark border">Analyse disponible</span>
+                }
+            </div>
+            <div class="card-body">
+                <div class="row g-4">
+                    <div class="col-lg-6">
+                        <h3 class="h6 mb-2">Image source</h3>
+                        <div class="d-flex gap-3 align-items-start">
+                            @if (prep.ImageIsAccessible)
+                            {
+                                <img src="@prep.ImagePath" alt="Aperçu du chèque @prep.ChequeNumber" class="case-summary-thumb" style="width:180px;height:84px;" />
+                            }
+                            @if (imgDone && Model.ImageTest != null)
+                            {
+                                <dl class="row mb-0 small flex-grow-1">
+                                    <dt class="col-sm-5">Dimensions</dt>
+                                    <dd class="col-sm-7 cell-num">@Model.ImageTest.Width × @Model.ImageTest.Height px</dd>
+                                    <dt class="col-sm-5">Type MIME</dt>
+                                    <dd class="col-sm-7"><code>@Model.ImageTest.ContentType</code></dd>
+                                    <dt class="col-sm-5">Décodage</dt>
+                                    <dd class="col-sm-7">@(Model.ImageTest.Decoded ? "Réussi" : "Échec")</dd>
+                                </dl>
+                            }
+                            else
+                            {
+                                <div class="flex-grow-1">
+                                    <p class="app-meta small mb-0">L'analyse de l'image sera exécutée automatiquement lors de la vérification.</p>
+                                </div>
+                            }
+                        </div>
+                        @if (imgDone)
+                        {
+                            <p class="mb-0 mt-2"><a href="#analyse-image">Voir l'analyse technique complète</a></p>
+                        }
+                    </div>
+                    <div class="col-lg-6">
+                        <h3 class="h6 mb-2">OCR — PaddleOCR</h3>
+                        @if (ocrDone && Model.ChequeOcr != null)
+                        {
+                            var ocr = Model.ChequeOcr;
+                            <div class="ocr-result-compact" role="status">
+                                <div class="d-flex align-items-center justify-content-between gap-2 flex-wrap mb-2">
+                                    <strong>OCR terminé</strong>
+                                    <span class="badge bg-success">Exécution réussie</span>
+                                </div>
+                                <div class="ocr-run-meta mb-3" aria-label="Informations d'exécution OCR">
+                                    @if (ocr.ProcessingMs > 0)
+                                    {
+                                        <span>@ocr.ProcessingMs ms</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(ocr.Lang))
+                                    {
+                                        <span>Langue : @ocr.Lang</span>
+                                    }
+                                    @if (!string.IsNullOrWhiteSpace(ocr.Device))
+                                    {
+                                        <span>Appareil : @ocr.Device</span>
+                                    }
+                                </div>
+                                <dl class="ocr-fields mb-0 small">
+                                    <div><dt>Numéro détecté</dt><dd>@(ocr.Fields.ChequeNumber ?? "Non identifié")</dd></div>
+                                    <div><dt>Date détectée</dt><dd>@(ocr.Fields.Date ?? "Non identifiée")</dd></div>
+                                    <div><dt>Montant détecté</dt><dd>@(!string.IsNullOrWhiteSpace(ocr.Fields.AmountNumeric) ? ocr.Fields.AmountNumeric + " MAD" : ocr.Fields.AmountText ?? "Non identifié")</dd></div>
+                                    <div><dt>Compte détecté</dt><dd>@(ocr.Fields.AccountNumber ?? "Non identifié")</dd></div>
+                                </dl>
+                            </div>
+                            <details class="app-tech-details ocr-recognized-details mt-3">
+                                <summary>Voir les éléments reconnus (@ocr.Lines.Count)</summary>
+                                <div class="ocr-diagnostic-surface mt-3">
+                                    <h4 class="h6">Texte reconnu</h4>
+                                    <pre class="ocr-full-text bg-light border rounded p-3">@(string.IsNullOrWhiteSpace(ocr.FullText) ? "— aucun texte détecté —" : ocr.FullText)</pre>
+                                    @if (ocr.Lines.Any())
+                                    {
+                                        <div class="table-responsive ocr-token-scroll mt-3" tabindex="0" role="region" aria-label="Éléments OCR reconnus et niveaux de confiance">
+                                            <table class="table table-sm table-hover align-middle mb-0">
+                                                <thead>
+                                                    <tr><th>#</th><th>Texte</th><th>Confiance</th></tr>
+                                                </thead>
+                                                <tbody>
+                                                    @for (int i = 0; i < ocr.Lines.Count; i++)
+                                                    {
+                                                        var line = ocr.Lines[i];
+                                                        <tr>
+                                                            <td>@(i + 1)</td>
+                                                            <td>@line.Text</td>
+                                                            <td><span class="badge bg-light text-dark">@line.Confidence.ToString("0.000")</span></td>
+                                                        </tr>
+                                                    }
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                    }
+                                </div>
+                            </details>
+                            <p class="app-meta small mb-0 mt-2">OCR diagnostique, expérimental et non persisté — indépendant de la similarité de signature. La confiance OCR ne constitue pas une probabilité de fraude ni une décision de conformité.</p>
+                        }
+                        else
+                        {
+                            @if (ocrFailed)
+                            {
+                                <div class="alert alert-warning small mb-2" role="alert">OCR indisponible — l'analyse textuelle du chèque n'a pas pu être exécutée.</div>
+                                @if (!string.IsNullOrWhiteSpace(Model.ChequeOcr?.FullText))
+                                {
+                                    <details class="app-tech-details mt-3">
+                                        <summary>Voir la sortie diagnostique OCR</summary>
+                                        <pre class="ocr-full-text bg-light border rounded p-2 mt-2">@Model.ChequeOcr.FullText</pre>
+                                    </details>
+                                }
+                            }
+                            else
+                            {
+                                <p class="app-meta small mb-0">La reconnaissance du texte (numéro, date, montant, compte) sera exécutée automatiquement lors de la vérification, à titre diagnostique.</p>
+                            }
+                        }
+                    </div>
+                </div>
+                <div class="info-strip mt-3 mb-0" role="note">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                    <span>L'OCR analyse les informations textuelles du chèque. Il n'intervient pas dans le calcul de similarité de la signature. L'extraction de la signature est réalisée séparément par OpenCV V2.4.</span>
+                </div>
+            </div>
+        </div>
+    }
+
+
+    @if (!verified && (prep.CanStartVerification && svcAvailable || hasEvidence))
+    {
+        var showExtracted = hasEvidence;
+        var evImagePath = prep.HasExtractedSignature ? prep.ExtractedSignatureImagePath : Model.SignatureExtraction?.ImagePath;
+        var evImageOk = prep.HasExtractedSignature ? prep.ExtractedSignatureImageIsAccessible : (Model.SignatureExtraction?.ImageIsAccessible == true);
+        var evQuality = prep.HasExtractedSignature ? prep.ExtractedSignatureQuality : Model.SignatureExtraction?.ExtractionQuality;
+        var evId = prep.HasExtractedSignature ? prep.ExtractedSignatureId?.ToString() : Model.SignatureExtraction?.ExtractedSignatureId.ToString();
+        var canLaunch = prep.CanStartVerification && svcAvailable;
+        var launchBlockMessage = !svcAvailable
+            ? "Service d'analyse indisponible. L'extraction et la vérification seront disponibles lorsque le service sera connecté."
+            : eligibilityMessage;
+        <div class="card mb-4 workstation-stage" id="etape-extraction" data-autoscroll="@(justExtracted ? "extraction-result" : null)">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <span><span class="step-eyebrow">Étape 3</span> — Extraction de la signature</span>
+                @if (showExtracted)
+                {
+                    <span class="badge bg-success">Signature extraite</span>
+                }
+                else
+                {
+                    <span class="badge bg-light text-dark border">En attente d'extraction</span>
+                }
+            </div>
+            <div class="card-body">
+                @if (!showExtracted)
+                {
+                    @if (!Model.AnalysisServiceAvailable)
+                    {
+                        <div class="alert alert-warning d-flex align-items-center gap-2" role="alert">
+                            <strong>Service d'analyse indisponible.</strong>
+                            <span>L'extraction et la vérification seront disponibles lorsque le service sera connecté.</span>
+                        </div>
+                    }
+                    <p class="app-meta mt-0 mb-0">La signature manuscrite du chèque @prep.ChequeNumber sera extraite automatiquement (OpenCV V2.4) lors de la vérification.</p>
+                    <div class="pipeline-panel mt-3">
+                        <h3 class="h6 mb-1">Processus d'extraction</h3>
+                        <p class="app-meta small mt-0 mb-2">Pipeline technique V2.4 — résumé affiché après exécution réelle.</p>
+                        <ol class="pipeline-stages is-pending" aria-label="Étapes du pipeline d'extraction">
+                            <li><span aria-hidden="true">○</span>Décodage OpenCV de l'image</li>
+                            <li><span aria-hidden="true">○</span>Calcul de la ROI relative</li>
+                            <li><span aria-hidden="true">○</span>Niveaux de gris + flou gaussien</li>
+                            <li><span aria-hidden="true">○</span>Otsu + composantes connexes + filtrage MICR</li>
+                            <li><span aria-hidden="true">○</span>Regroupement + noyau dominant + raffinement</li>
+                            <li><span aria-hidden="true">○</span>Continuation directionnelle V2.4</li>
+                            <li><span aria-hidden="true">○</span>Recadrage avec marge</li>
+                            <li><span aria-hidden="true">○</span>Encodage PNG + qualité + persistance</li>
+                        </ol>
+                    </div>
+                    <div class="ref-readiness extraction-readiness mt-3">
+                        <span class="badge @(activeRefCount == 5 ? "bg-success" : activeRefCount >= 1 ? "bg-warning text-dark" : "bg-secondary")">@activeRefCount / 5</span>
+                        <span class="small fw-semibold">références actives disponibles</span>
+                        <span class="app-meta small">La galerie est présentée à l'étape Comparaison.</span>
+                    </div>
+                }
+                else
+                {
+                    <p class="extract-success" role="status">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+                        Signature extraite avec succès
+                    </p>
+                    <div class="row g-4">
+                        <div class="col-lg-7">
+                            <figure class="evidence-frame mb-0">
+                                @if (evImageOk)
+                                {
+                                    <img src="@evImagePath" alt="Signature extraite du chèque @prep.ChequeNumber" class="img-fluid" />
+                                }
+                                else
+                                {
+                                    <p class="text-muted">Aperçu non disponible.</p>
+                                }
+                                <figcaption class="text-muted small mt-2">Signature extraite — @prep.ChequeNumber</figcaption>
+                            </figure>
+                        </div>
+                        <div class="col-lg-5">
+                            <dl class="row mb-0 workstation-meta">
+                                <dt class="col-sm-6">Qualité technique</dt>
+                                <dd class="col-sm-6"><span class="score-chip">@(evQuality?.ToString("P1") ?? "—")</span></dd>
+                                <dt class="col-sm-6">Signature extraite</dt>
+                                <dd class="col-sm-6">#@(evId ?? "—")</dd>
+                                <dt class="col-sm-6">Statut</dt>
+                                <dd class="col-sm-6"><span class="badge bg-success">Prête pour comparaison</span></dd>
+                            </dl>
+                            <details class="app-tech-details mt-3">
+                                <summary>Détails techniques</summary>
+                                <dl class="row mb-0 mt-2 small">
+                                    <dt class="col-sm-5">Chemin du fichier</dt>
+                                    <dd class="col-sm-7"><code class="text-break">@evImagePath</code></dd>
+                                </dl>
+                            </details>
+                        </div>
+                    </div>
+                    <p class="app-meta small mt-4 mb-0">Signature déjà extraite — elle sera réutilisée automatiquement par la vérification.</p>
+                    <div class="pipeline-panel mt-4" id="processus-extraction">
+                        <h3 class="h6 mb-1">Processus d'extraction</h3>
+                        <p class="app-meta small mt-0 mb-2">Pipeline technique V2.4 exécuté dans son ensemble — aucune télémétrie individuelle par étape n'est persistée.</p>
+                        <ol class="pipeline-stages is-done" aria-label="Étapes du pipeline d'extraction terminées">
+                            <li><span aria-hidden="true">✓</span>Décodage OpenCV de l'image</li>
+                            <li><span aria-hidden="true">✓</span>Calcul de la ROI relative</li>
+                            <li><span aria-hidden="true">✓</span>Niveaux de gris + flou gaussien</li>
+                            <li><span aria-hidden="true">✓</span>Otsu + composantes connexes + filtrage MICR</li>
+                            <li><span aria-hidden="true">✓</span>Regroupement + noyau dominant + raffinement</li>
+                            <li><span aria-hidden="true">✓</span>Continuation directionnelle V2.4</li>
+                            <li><span aria-hidden="true">✓</span>Recadrage avec marge</li>
+                            <li><span aria-hidden="true">✓</span>Encodage PNG + qualité + persistance</li>
+                        </ol>
+                        <p class="app-meta small mb-1">OpenCV est utilisé pour le prétraitement de l'image et l'isolation de la zone de signature.</p>
+                        <p class="app-meta small mb-2">La décision de conformité est produite ensuite par le modèle V5-A à partir de la comparaison avec 5 signatures de référence.</p>
+                        <p class="mb-0"><a href="#outils-diagnostic">Voir le diagnostic OpenCV détaillé</a></p>
+                    </div>
+                }
+            </div>
+        </div>
+        <div class="card mb-4 workstation-stage" id="etape-comparaison">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <span><span class="step-eyebrow">Étape 4</span> — Comparaison V5-A</span>
+                <span class="badge @(activeRefCount == 5 ? "bg-success" : "bg-warning text-dark")">@(activeRefCount == 5 ? "Prêtes pour comparaison" : "Référentiel incomplet")</span>
+            </div>
+            <div class="card-body">
+                <p class="app-meta small mt-0 mb-3">Un seul clic exécute automatiquement : analyse, extraction OpenCV V2.4, comparaison V5-A sur les 5 références, puis décision selon la politique L / U. Le bilan complet s'affiche ensuite.</p>
+                    <div class="ref-readiness" id="comparaison">
+                        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-2">
+                            <h3 class="h6 mb-0">@activeRefCount / 5 signatures de référence disponibles</h3>
+                            <span class="badge @(activeRefCount == 5 ? "bg-success" : "bg-warning text-dark")">@(activeRefCount == 5 ? "Prêtes pour comparaison" : "Référentiel incomplet")</span>
+                        </div>
+                        <p class="app-meta small mt-0 mb-2">@(showExtracted ? "Signature déjà extraite — elle sera réutilisée automatiquement." : "L'extraction et la comparaison V5-A seront exécutées automatiquement.")</p>
+                        <ul class="ref-strip" aria-label="Cinq emplacements de signatures de référence">
+                            @for (var referenceIndex = 0; referenceIndex < 5; referenceIndex++)
+                            {
+                                <li>
+                                    @if (referenceIndex < prep.ReferenceSignatures.Count)
+                                    {
+                                        var r = prep.ReferenceSignatures[referenceIndex];
+                                        @if (r.ImageIsAccessible)
+                                        {
+                                            <img src="@r.ImagePath" alt="Signature de référence #@r.ReferenceSignatureId" loading="lazy" />
+                                        }
+                                        else
+                                        {
+                                            <span class="ref-missing">Indisponible</span>
+                                        }
+                                        <span class="ref-id">Référence #@r.ReferenceSignatureId</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="ref-missing">Manquante</span>
+                                        <span class="ref-id">Référence non disponible</span>
+                                    }
+                                </li>
+                            }
+                        </ul>
+                    </div>
+                    <div class="d-flex gap-3 align-items-center flex-wrap mt-4">
+                        @if (canLaunch)
+                        {
+                            <form method="post" asp-action="VerifyAutomatically" asp-route-chequeId="@prep.ChequeId" class="mb-0" onsubmit="var b=this.querySelector('button'); if(b){b.disabled=true; b.innerText='Vérification en cours...';}">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-primary btn-lg">Vérifier le chèque →</button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span>
+                                <button type="button" class="btn btn-outline-secondary" disabled aria-describedby="comparison-prerequisite">Vérifier le chèque</button>
+                                <span class="text-muted small ms-2" id="comparison-prerequisite">@launchBlockMessage</span>
+                            </span>
+                        }
+                    </div>
+                <details class="app-tech-details mt-4" id="outils-diagnostic">
+                    <summary>Outils de diagnostic</summary>
+                    <p class="text-muted small mt-2 mb-2">La vérification « Vérifier le chèque » exécute automatiquement : image → texte (OCR diagnostique) → signature isolée (OpenCV V2.4) → similarités V5-A → décision. Les contrôles ci-dessous sont des inspections techniques secondaires : ils n'enregistrent aucune décision.</p>
+                    <div class="d-flex gap-2 align-items-center flex-wrap">
+                        <form method="post" asp-action="TestImage" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Tester l'image du chèque</button>
+                        </form>
+                        <form method="post" asp-action="ExtractSignature" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Extraire (diagnostic)</button>
+                        </form>
+                        <form method="post" asp-action="ReExtractSignature" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Réextraire (diagnostic)</button>
+                        </form>
+                        <form method="post" asp-action="TestSignatureExtraction" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Tester l'extraction de signature</button>
+                        </form>
+                        <form method="post" asp-action="DebugSignatureExtraction" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Afficher le diagnostic d'extraction</button>
+                        </form>
+                        <form method="post" asp-action="TestChequeOcr" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                            @Html.AntiForgeryToken()
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">Tester l'OCR du chèque</button>
+                        </form>
+                        @if (prep.HasExtractedSignature)
+                        {
+                            <form method="post" asp-action="TestSignatureComparison" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Tester la comparaison</button>
+                            </form>
+                            <form method="post" asp-action="TestSignatureComparisonAi" asp-route-chequeId="@prep.ChequeId" class="mb-0">
+                                @Html.AntiForgeryToken()
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Tester la comparaison IA</button>
+                            </form>
+                        }
+                    </div>
+                </details>
+            </div>
+        </div>
+    }
+    else if (!verified && !hasEvidence)
+    {
+        <div class="card mb-4 gate-blocked">
+            <div class="card-body">
+                <p class="step-eyebrow mb-1">Vérification impossible</p>
+                <p class="mb-2">@eligibilityMessage</p>
+                <p class="mb-3"><span class="record-secondary">Signatures de référence</span> <strong class="cell-date">@activeRefCount / 5 actives</strong></p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a asp-controller="ReferenceSignatures" asp-action="Index" asp-route-search="@prep.CustomerNumber" class="btn btn-sm btn-outline-secondary">Voir les signatures du client</a>
+                    <a asp-action="Create" class="btn btn-sm btn-outline-secondary">Choisir un autre chèque</a>
+                </div>
+            </div>
+        </div>
+    }
+}
+
+@if (Model.ImageTest != null)
+{
+    <div class="card mt-4" id="analyse-image">
+        <div class="card-header">
+            <strong>Analyse technique de l'image</strong>
+        </div>
+        <div class="card-body">
+            @if (Model.ImageTest.Success)
+            {
+                <dl class="row mb-3">
+                    <dt class="col-sm-3">Largeur</dt>
+                    <dd class="col-sm-9">@Model.ImageTest.Width px</dd>
+                    <dt class="col-sm-3">Hauteur</dt>
+                    <dd class="col-sm-9">@Model.ImageTest.Height px</dd>
+                    <dt class="col-sm-3">Canaux</dt>
+                    <dd class="col-sm-9">@Model.ImageTest.Channels</dd>
+                    <dt class="col-sm-3">Type MIME</dt>
+                    <dd class="col-sm-9"><code>@Model.ImageTest.ContentType</code></dd>
+                    <dt class="col-sm-3">Décodage</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.ImageTest.Decoded)
+                        {
+                            <span class="badge bg-success">Réussi</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Échec</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-3">Conversion niveaux de gris</dt>
+                    <dd class="col-sm-9">
+                        @if (Model.ImageTest.GrayscaleReady)
+                        {
+                            <span class="badge bg-success">Prête</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger">Non prête</span>
+                        }
+                    </dd>
+                </dl>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-3" role="alert">
+                    @(Model.ImageTest.ErrorMessage ?? "L'analyse de l'image a échoué.")
+                </div>
+            }
+            <p class="text-muted small mb-0">
+                Cette étape vérifie uniquement que l'image peut être traitée par le service d'analyse.
+            </p>
+        </div>
+    </div>
+}
+
+@if (Model.SignatureTest != null)
+{
+    <div class="card mt-4">
+        <div class="card-header">
+            <strong>Extraction expérimentale de la signature</strong>
+        </div>
+        <div class="card-body">
+            @if (Model.SignatureTest.Success)
+            {
+                <div class="row">
+                    <div class="col-md-6 text-center mb-3">
+                        @if (!string.IsNullOrEmpty(Model.SignatureTest.SignatureImageDataUri))
+                        {
+                            <img src="@Model.SignatureTest.SignatureImageDataUri" alt="Crop de signature extrait"
+                                 class="img-fluid border rounded bg-white" style="max-height: 320px;" />
+                        }
+                        else
+                        {
+                            <p class="text-muted">Crop non disponible.</p>
+                        }
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row mb-3">
+                            <dt class="col-sm-5">Taille d'origine</dt>
+                            <dd class="col-sm-7">@Model.SignatureTest.OriginalWidth × @Model.SignatureTest.OriginalHeight px</dd>
+                            <dt class="col-sm-5">Crop</dt>
+                            <dd class="col-sm-7">@(Model.SignatureTest.BboxWidth ?? 0) × @(Model.SignatureTest.BboxHeight ?? 0) px</dd>
+                            <dt class="col-sm-5">Zone candidate (ROI)</dt>
+                            <dd class="col-sm-7">x=@(Model.SignatureTest.RoiX ?? 0), y=@(Model.SignatureTest.RoiY ?? 0), @(Model.SignatureTest.RoiWidth ?? 0) × @(Model.SignatureTest.RoiHeight ?? 0)</dd>
+                            <dt class="col-sm-5">Bounding box détectée</dt>
+                            <dd class="col-sm-7">x=@(Model.SignatureTest.BboxX ?? 0), y=@(Model.SignatureTest.BboxY ?? 0), @(Model.SignatureTest.BboxWidth ?? 0) × @(Model.SignatureTest.BboxHeight ?? 0)</dd>
+                            <dt class="col-sm-5">Qualité d'extraction</dt>
+                            <dd class="col-sm-7"><span class="badge bg-light text-dark">@(Model.SignatureTest.ExtractionQuality?.ToString("0.000") ?? "—")</span></dd>
+                        </dl>
+                        <div class="alert alert-info small mb-3">
+                            Cette valeur représente une <strong>heuristique technique</strong> d'extraction.
+                            Elle ne mesure pas l'authenticité de la signature.
+                        </div>
+                        <div class="alert alert-warning small mb-0">
+                            L'extraction est actuellement basée sur une <strong>zone candidate configurable</strong>
+                            et devra être validée sur les formats réels de chèques.
+                        </div>
+                    </div>
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-3" role="alert">
+                    @(Model.SignatureTest.ErrorMessage ?? "L'extraction de la signature a échoué.")
+                </div>
+                <p class="text-muted small mb-0">
+                    L'extraction est expérimentale : elle repose sur une zone candidate configurable
+                    et peut échouer si aucun contenu n'est détecté dans cette zone.
+                </p>
+            }
+        </div>
+    </div>
+}
+
+@if (Model.SignatureDebug != null)
+{
+    var debug = Model.SignatureDebug;
+
+    <details class="app-tech-details diagnostic-disclosure mt-4" id="diagnostic-opencv">
+        <summary class="diagnostic-summary">
+            <strong>Diagnostic complet de l'extraction OpenCV</strong>
+            @if (!string.IsNullOrEmpty(debug.PipelineVersion))
+            {
+                <span class="badge bg-secondary">Pipeline v@(debug.PipelineVersion)</span>
+            }
+        </summary>
+        <div class="diagnostic-console">
+            @if (debug.Success)
+            {
+                <div class="alert alert-warning small mb-3" role="alert">
+                    Ce diagnostic sert uniquement à <strong>calibrer la zone de recherche de la signature</strong>.
+                    Il ne constitue pas une vérification de conformité.
+                </div>
+
+                @if (!string.IsNullOrEmpty(debug.Message))
+                {
+                    <div class="alert alert-info small mb-3" role="alert">
+                        @debug.Message
+                    </div>
+                }
+
+                <h3 class="diagnostic-section-title">Repérage visuel</h3>
+                <div class="row">
+                    <div class="col-md-6 text-center mb-3">
+                        <figure class="mb-0">
+                            @if (!string.IsNullOrEmpty(debug.OriginalWithRoiDataUri))
+                            {
+                                <img src="@debug.OriginalWithRoiDataUri" alt="Image originale avec ROI et bbox"
+                                     class="img-fluid border rounded bg-white" style="max-height: 320px;" />
+                            }
+                            else
+                            {
+                                <p class="text-muted">Image originale non disponible.</p>
+                            }
+                            <figcaption class="text-muted small mt-1">Image originale — rectangle vert : ROI candidate, magenta : zone de risque MICR, rouge : bbox finale.</figcaption>
+                        </figure>
+                    </div>
+                    <div class="col-md-6 text-center mb-3">
+                        <figure class="mb-0">
+                            @if (!string.IsNullOrEmpty(debug.RoiImageDataUri))
+                            {
+                                <img src="@debug.RoiImageDataUri" alt="Zone candidate (ROI)"
+                                     class="img-fluid border rounded bg-white" style="max-height: 320px;" />
+                            }
+                            else
+                            {
+                                <p class="text-muted">Zone candidate non disponible.</p>
+                            }
+                            <figcaption class="text-muted small mt-1">Zone candidate (ROI) — rectangle rouge : bbox finale.</figcaption>
+                        </figure>
+                    </div>
+                </div>
+
+                <h3 class="diagnostic-section-title">Mesures et raffinement</h3>
+                <dl class="row diagnostic-metrics mb-3">
+                    <dt class="col-sm-4">Taille d'origine</dt>
+                    <dd class="col-sm-8">@debug.OriginalWidth × @debug.OriginalHeight px</dd>
+                    <dt class="col-sm-4">ROI candidate</dt>
+                    <dd class="col-sm-8">x=@(debug.RoiX ?? 0), y=@(debug.RoiY ?? 0), @(debug.RoiWidth ?? 0) × @(debug.RoiHeight ?? 0)</dd>
+                    <dt class="col-sm-4">Zone de risque MICR</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.MicrBandWidth.HasValue && debug.MicrBandHeight.HasValue)
+                        {
+                            <span>x=@(debug.MicrBandX ?? 0), y=@(debug.MicrBandY ?? 0), @debug.MicrBandWidth × @debug.MicrBandHeight (ROI-local)</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Non renseignée</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Bounding box finale</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.BboxWidth.HasValue && debug.BboxHeight.HasValue)
+                        {
+                            <span>x=@(debug.BboxX ?? 0), y=@(debug.BboxY ?? 0), @debug.BboxWidth × @debug.BboxHeight</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Non détectée</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Qualité d'extraction</dt>
+                    <dd class="col-sm-8"><span class="badge bg-light text-dark">@(debug.ExtractionQuality?.ToString("0.000") ?? "—")</span></dd>
+                    <dt class="col-sm-4">Composantes détectées</dt>
+                    <dd class="col-sm-8">@(debug.TotalComponentCount ?? 0) (retenues : @(debug.RetainedComponentCount ?? 0), rejetées : @(debug.RejectedComponentCount ?? 0), MICR : @(debug.MicrRejectedCount ?? 0))</dd>
+                    <dt class="col-sm-4">Groupes spatiaux</dt>
+                    <dd class="col-sm-8">@(debug.GroupCount ?? 0)</dd>
+                    <dt class="col-sm-4">Groupe sélectionné</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.SelectedGroupIndex.HasValue && debug.SelectedGroupIndex >= 0)
+                        {
+                            <span>Groupe #@debug.SelectedGroupIndex</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Aucun</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Raison de la sélection</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(debug.SelectionReason))
+                        {
+                            <code class="text-break small">@debug.SelectionReason</code>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Rejets par motif</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.RejectedComponentReasons.Any())
+                        {
+                            <span class="text-break">
+                                @string.Join(", ", debug.RejectedComponentReasons.Select(kv => $"{kv.Key} = {kv.Value}"))
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Aucun rejet</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Raffinement V2.3 — noyau dominant</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.DominantComponentWidth.HasValue && debug.DominantComponentHeight.HasValue)
+                        {
+                            <span>
+                                bbox x=@(debug.DominantComponentX ?? 0), y=@(debug.DominantComponentY ?? 0),
+                                @debug.DominantComponentWidth × @debug.DominantComponentHeight — encre
+                                @(debug.DominantComponentInk ?? 0) px — score @(debug.DominantComponentScore?.ToString("0.000000") ?? "—")
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Non détecté</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Structure raffinée</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.RefinedComponentCount.HasValue)
+                        {
+                            <span>
+                                @debug.RefinedComponentCount composante(s) retenue(s)
+                                @if (debug.RefinedBboxWidth.HasValue && debug.RefinedBboxHeight.HasValue)
+                                {
+                                    <span>— bbox raffinée x=@(debug.RefinedBboxX ?? 0), y=@(debug.RefinedBboxY ?? 0), @debug.RefinedBboxWidth × @debug.RefinedBboxHeight</span>
+                                }
+                            </span>
+                            <br />
+                            <span class="text-muted small">
+                                Retenues (indices groupe) : @string.Join(", ", debug.CoreComponentIndices)
+                                @if (debug.DiscardedFromSelectedGroupIndices.Any())
+                                {
+                                    <text>— rejetées : @string.Join(", ", debug.DiscardedFromSelectedGroupIndices)</text>
+                                }
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Non disponible</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Raison du raffinement</dt>
+                    <dd class="col-sm-8">
+                        @if (!string.IsNullOrEmpty(debug.RefinementReason))
+                        {
+                            <code class="text-break small">@debug.RefinementReason</code>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Continuation directionnelle (V2.4)</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.DirectionalAcceptedIndices.Any())
+                        {
+                            <span>Retenues : @string.Join(", ", debug.DirectionalAcceptedIndices)</span>
+                            <br />
+                            <span class="text-muted small">
+                                @foreach (var d in debug.DirectionalAcceptDetails)
+                                {
+                                    <text>
+                                        #@d.ComponentIndex ancré sur #@d.AnchorIndex — gap H @d.HGap px (limite @d.HGapLimit px),
+                                        gap V @d.VGap px, distance encre @d.InkDistance px (limite @d.InkDistanceLimit px),
+                                        hauteur @d.Height px
+                                    </text>
+                                    <br />
+                                }
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">Aucune composante ajoutée par la continuation directionnelle</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Complétude (V2.4)</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.CompletenessScore.HasValue)
+                        {
+                            <span>@debug.CompletenessScore.Value.ToString("0.000") — encre raffinée @(debug.CompletenessRefinedInk ?? 0) / référence @(debug.CompletenessReferenceInk ?? 0) px</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Qualité V2.4</dt>
+                    <dd class="col-sm-8">
+                        @if (debug.QualityBase.HasValue && debug.QualityCompletenessFactor.HasValue)
+                        {
+                            <span>base @debug.QualityBase.Value.ToString("0.0000") × facteur complétude @debug.QualityCompletenessFactor.Value.ToString("0.000")</span>
+                        }
+                        else
+                        {
+                            <span class="text-muted">—</span>
+                        }
+                    </dd>
+                </dl>
+
+                @if (debug.Groups.Any())
+                {
+                    <h3 class="diagnostic-section-title">Groupes spatiaux</h3>
+                    <div class="table-responsive mb-3">
+                        <table class="table table-sm table-hover align-middle mb-0">
+                            <thead>
+                                <tr>
+                                    <th>Index</th>
+                                    <th>Composantes</th>
+                                    <th>Bounding box (ROI-local)</th>
+                                    <th>Aire d'encre</th>
+                                    <th>Score</th>
+                                    <th>Sélectionné</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var g in debug.Groups)
+                                {
+                                    <tr class="@(g.Selected ? "table-warning" : "")">
+                                        <td>#@g.Index</td>
+                                        <td>@g.ComponentCount</td>
+                                        <td>
+                                            @if (g.BboxWidth.HasValue && g.BboxHeight.HasValue)
+                                            {
+                                                <span>x=@(g.BboxX ?? 0), y=@(g.BboxY ?? 0), @g.BboxWidth × @g.BboxHeight</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="text-muted">—</span>
+                                            }
+                                        </td>
+                                        <td>@g.InkArea</td>
+                                        <td>@g.Score.ToString("0.000000")</td>
+                                        <td>
+                                            @if (g.Selected)
+                                            {
+                                                <span class="badge bg-warning text-dark">Oui</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-light text-dark">Non</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                <h3 class="diagnostic-section-title">Images intermédiaires</h3>
+                <div class="row row-cols-2 row-cols-lg-4 g-2 mb-3">
+                    @if (!string.IsNullOrEmpty(debug.MaskImageDataUri))
+                    {
+                        <figure class="mb-0 text-center">
+                            <img src="@debug.MaskImageDataUri" alt="Masque binaire de la ROI"
+                                 class="img-fluid border rounded bg-white" style="max-height: 160px;" />
+                            <figcaption class="text-muted small mt-1">Masque binaire (255 = encre)</figcaption>
+                        </figure>
+                    }
+                    @if (!string.IsNullOrEmpty(debug.ComponentsImageDataUri))
+                    {
+                        <figure class="mb-0 text-center">
+                            <img src="@debug.ComponentsImageDataUri" alt="Composantes retenues"
+                                 class="img-fluid border rounded bg-white" style="max-height: 160px;" />
+                            <figcaption class="text-muted small mt-1">Composantes retenues (bleu)</figcaption>
+                        </figure>
+                    }
+                    @if (!string.IsNullOrEmpty(debug.ComponentsRejectedDataUri))
+                    {
+                        <figure class="mb-0 text-center">
+                            <img src="@debug.ComponentsRejectedDataUri" alt="Composantes rejetées"
+                                 class="img-fluid border rounded bg-white" style="max-height: 160px;" />
+                            <figcaption class="text-muted small mt-1">Composantes rejetées (gris / orange MICR)</figcaption>
+                        </figure>
+                    }
+                    @if (!string.IsNullOrEmpty(debug.GroupsImageDataUri))
+                    {
+                        <figure class="mb-0 text-center">
+                            <img src="@debug.GroupsImageDataUri" alt="Tous les groupes générés"
+                                 class="img-fluid border rounded bg-white" style="max-height: 160px;" />
+                            <figcaption class="text-muted small mt-1">Tous les groupes (couleurs distinctes)</figcaption>
+                        </figure>
+                    }
+                    @if (!string.IsNullOrEmpty(debug.RefinedGroupImageDataUri))
+                    {
+                        <figure class="mb-0 text-center">
+                            <img src="@debug.RefinedGroupImageDataUri" alt="Structure raffinée (V2.3/V2.4)"
+                                 class="img-fluid border rounded bg-white" style="max-height: 160px;" />
+                            <figcaption class="text-muted small mt-1">Structure raffinée (jaune = noyau, bleu = retenues, gris = rejetées)</figcaption>
+                        </figure>
+                    }
+                </div>
+
+                @if (!string.IsNullOrEmpty(debug.SignatureImageDataUri))
+                {
+                    <h3 class="diagnostic-section-title">Résultat extrait</h3>
+                    <div class="text-center mb-3">
+                        <figure class="mb-0 d-inline-block">
+                            <img src="@debug.SignatureImageDataUri" alt="Crop final de la signature"
+                                 class="border rounded bg-white" style="max-height: 200px;" />
+                            <figcaption class="text-muted small mt-1">Crop final extrait.</figcaption>
+                        </figure>
+                    </div>
+                }
+            }
+            else
+            {
+                <div class="alert alert-danger mb-3" role="alert">
+                    @(debug.ErrorMessage ?? "Le diagnostic d'extraction a échoué.")
+                </div>
+            }
+        </div>
+    </details>
+}
+
+@if (Model.SignatureExtraction != null)
+{
+    var extraction = Model.SignatureExtraction;
+
+    @if (!extraction.Success)
+    {
+        <div class="card mt-4">
+            <div class="card-header">
+                <strong>Extraction de la signature</strong>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-danger mb-0" role="alert">
+                    @(extraction.Message ?? "L'extraction de la signature a échoué.")
+                </div>
+            </div>
+        </div>
+    }
+    else if (!string.IsNullOrEmpty(extraction.Message) && extraction.Message.Contains("ré-extraite", StringComparison.OrdinalIgnoreCase))
+    {
+        <div class="info-strip mt-4 mb-0" role="note">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            <span>Signature ré-extraite : même ID, nouveau fichier persisté et nouvelle qualité. L'ancien fichier a été supprimé après validation.</span>
+        </div>
+    }
+}
+
+@if (Model.SignatureComparison != null)
+{
+    var comparison = Model.SignatureComparison;
+
+    <div class="card mt-4" id="comparaison-opencv">
+        <div class="card-header">
+            <strong>Comparaison expérimentale des signatures</strong>
+            <span class="badge bg-light text-dark border ms-2">Diagnostic — non utilisée dans la décision finale</span>
+        </div>
+        <div class="card-body">
+            @if (comparison.Success)
+            {
+                <div class="alert alert-success mb-3" role="alert">
+                    <strong>@comparison.Message</strong>
+                    <span class="small"> (méthode <code>@comparison.Method</code>, version <code>@comparison.Version</code>)</span>
+                </div>
+
+                <table class="table table-sm table-hover align-middle mb-3">
+                    <thead>
+                        <tr>
+                            <th>Signature de référence</th>
+                            <th>Score technique</th>
+                            <th>Méthode</th>
+                            <th>État</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in comparison.Comparisons)
+                        {
+                            <tr>
+                                <td>Référence #@item.ReferenceSignatureId</td>
+                                <td>
+                                    @if (item.IsAvailable)
+                                    {
+                                        <span class="badge @(item.ReferenceSignatureId == comparison.BestReferenceSignatureId ? "bg-warning text-dark" : "bg-light text-dark")">
+                                            @(item.Score?.ToString("0.000000") ?? "—")
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>@(item.IsAvailable ? item.Method : "—")</td>
+                                <td>
+                                    @if (item.IsAvailable)
+                                    {
+                                        <span class="badge bg-success">Comparée</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@item.StatusMessage</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (comparison.BestReferenceSignatureId.HasValue)
+                {
+                    <p class="mb-0">
+                        <strong>Meilleure correspondance :</strong> Référence #@comparison.BestReferenceSignatureId
+                        / Score : <span class="badge bg-warning text-dark">@(comparison.BestSimilarityScore?.ToString("0.000000") ?? "—")</span>
+                    </p>
+                }
+
+                <div class="alert alert-warning small mb-0 mt-3" role="alert">
+                    Ce score est une <strong>mesure technique expérimentale</strong> de similarité visuelle,
+                    calculée en mémoire. Il ne constitue <strong>pas</strong> une probabilité d'authenticité ou
+                    de fraude, ni une décision de conformité, ni un verdict bancaire. Aucun seuil de décision
+                    n'est appliqué. La conformité reste un traitement ultérieur du workflow.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-0" role="alert">
+                    @(comparison.Message ?? "La comparaison des signatures a échoué.")
+                </div>
+            }
+        </div>
+    </div>
+}
+
+@if (Model.SignatureAiComparison != null)
+{
+    var aiComparison = Model.SignatureAiComparison;
+
+    <div class="card mt-4" id="comparaison-ia">
+        <div class="card-header">
+            <strong>Comparaison IA des signatures (V5-A)</strong>
+            <span class="badge bg-light text-dark border ms-2">Détails du modèle</span>
+        </div>
+        <div class="card-body">
+            @if (aiComparison.Success)
+            {
+                <div class="alert alert-success mb-3" role="alert">
+                    <strong>@aiComparison.Message</strong>
+                </div>
+
+                <table class="table table-sm table-hover align-middle mb-3">
+                    <thead>
+                        <tr>
+                            <th>Signature de référence</th>
+                            <th>Score cosinus brut</th>
+                            <th>Méthode</th>
+                            <th>Modèle</th>
+                            <th>État</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var item in aiComparison.Comparisons)
+                        {
+                            <tr>
+                                <td>Référence #@item.ReferenceSignatureId</td>
+                                <td>
+                                    @if (item.IsAvailable)
+                                    {
+                                        <span class="badge bg-light text-dark">@(item.Score?.ToString("0.000000") ?? "—")</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">—</span>
+                                    }
+                                </td>
+                                <td>@(item.IsAvailable ? $"{item.Method} ({item.Version})" : "—")</td>
+                                <td>@(item.IsAvailable ? $"{item.Model} — {item.Device}" : "—")</td>
+                                <td>
+                                    @if (item.IsAvailable)
+                                    {
+                                        <span class="badge bg-success">Comparée</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary">@item.StatusMessage</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+
+                @if (aiComparison.IsAggregationAvailable && aiComparison.MeanRawScore.HasValue)
+                {
+                    <div class="card bg-light border-0 mb-3">
+                        <div class="card-body">
+                            <h6 class="mb-2"><strong>Score moyen multi-référence</strong></h6>
+                            <p class="mb-1"><span class="badge bg-light text-dark border" style="font-size:1rem;">@aiComparison.MeanRawScore.Value.ToString("0.000000")</span></p>
+                            <p class="small mb-1">Références comparées : @aiComparison.ComparedReferenceCount / @aiComparison.ActiveReferenceCount</p>
+                            @if (aiComparison.UnavailableReferenceCount > 0)
+                            {
+                                <p class="small text-muted mb-1">@aiComparison.UnavailableReferenceCount référence(s) indisponible(s)</p>
+                            }
+                            @if (aiComparison.ActiveReferenceCount == 5)
+                            {
+                                <p class="small mb-2">Comparaison multi-référence complète : 5/5 références actives.</p>
+                            }
+                            else
+                            {
+                                <p class="small mb-2">Comparaison multi-référence partielle : @aiComparison.ActiveReferenceCount/5 références actives.</p>
+                            }
+                            <div class="alert alert-info small mb-0" role="alert">
+                                Score cosinus brut agrégé à titre expérimental. Ce score ne constitue pas à lui seul une décision de conformité.
+                            </div>
+                        </div>
+                    </div>
+                }
+
+                <div class="alert alert-warning small mb-0" role="alert">
+                    Le score IA est une <strong>similarité cosinus brute</strong> entre embeddings
+                    (valeur technique dans [-1 ; 1]). Il est calculé indépendamment du score OpenCV :
+                    les deux mesures ne sont jamais fusionnées. Ce n'est <strong>pas</strong> une
+                    probabilité d'authenticité ou de fraude, ni une décision de conformité, ni un verdict
+                    bancaire. Aucun seuil de décision n'est appliqué et aucun résultat IA n'est persisté.
+                </div>
+            }
+            else
+            {
+                <div class="alert alert-danger mb-3" role="alert">
+                    @(aiComparison.Message ?? "La comparaison IA a échoué.")
+                </div>
+
+                @if (aiComparison.Comparisons.Any(c => !string.IsNullOrEmpty(c.StatusMessage)))
+                {
+                    <ul class="mb-0 small text-muted">
+                        @foreach (var item in aiComparison.Comparisons.Where(c => !string.IsNullOrEmpty(c.StatusMessage)))
+                        {
+                            <li>Référence #@item.ReferenceSignatureId : @item.StatusMessage</li>
+                        }
+                    </ul>
+                }
+            }
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        (function () {
+            var scrollTarget = document.querySelector('[data-autoscroll="extraction-result"]');
+            if (!scrollTarget) { return; }
+            var reduceMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+            try {
+                scrollTarget.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth', block: 'start' });
+                var focusable = scrollTarget.querySelector('button, a, [tabindex]');
+                if (focusable && focusable.focus) { focusable.focus({ preventScroll: true }); }
+            } catch (e) { /* progressive enhancement only */ }
+        })();
+    </script>
+}

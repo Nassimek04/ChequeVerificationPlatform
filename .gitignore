@@ -1,0 +1,81 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv*/
+venv/
+env/
+.pytest_cache/
+*.egg-info/
+dist/
+build/
+
+# Env / secrets - keep .env.example, ignore real .env
+.env
+*.local
+
+# Logs
+*.log
+logs/
+
+# Visual Studio / VS Code / Rider
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+
+# .NET build output
+bin/
+obj/
+*.binlog
+TestResults/
+*.db
+*.sqlite
+*.db-shm
+*.db-wal
+
+# Node (if any)
+node_modules/
+
+# AI / ML large artifacts - excluded to keep repo pushable
+# Uncomment to version them with Git LFS instead
+**/ai/checkpoints/
+**/ai/reports/
+checkpoints/
+*.pt
+*.pth
+*.onnx
+*.bin
+*.safetensors
+*.ckpt
+*.h5
+*.pb
+
+# Datasets / experiments output
+*.csv
+!**/test*.csv
+datasets/
+data/raw/
+data/processed/
+
+# User uploads (cheque/signature images) - never commit (privacy + size).
+# Folders are auto-created at runtime by Directory.CreateDirectory.
+src/ChequeVerification.Web/wwwroot/uploads/
+
+# Test-run binary dumps
+artifacts/phase12d-tests/
+
+# Dev seed containing a real account number - never push to public repo
+artifacts/cmc7_supervisor_customer_seed.sql
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Temp
+tmp/
+temp/
+*.tmp
+*.bak

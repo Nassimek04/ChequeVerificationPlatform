@@ -1,0 +1,171 @@
+@model ChequeVerification.Web.ViewModels.Admin.AdminDashboardViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@using System.Globalization
+@{
+    ViewData["Title"] = "Administration";
+    var fr = CultureInfo.GetCultureInfo("fr-FR");
+    var lowPct = (Model.LowerThreshold * 100).ToString("0.00", fr);
+    var highPct = (Model.UpperThreshold * 100).ToString("0.00", fr);
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Supervision", Title = "Administration", Subtitle = "Supervision : comptes, référentiels, politique de vérification et piste d\u2019audit." }' />
+
+<div class="row">
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Utilisateurs", Value = Model.TotalUsers.ToString(), AccentColor = "#64748b" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Clients", Value = Model.TotalCustomers.ToString(), AccentColor = "#64748b" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Chèques", Value = Model.TotalCheques.ToString(), AccentColor = "#64748b" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Vérifications", Value = Model.TotalVerifications.ToString(), AccentColor = "#64748b" }' />
+</div>
+
+@if (Model.PendingManualReviews > 0)
+{
+    <div class="attention-strip" role="alert">
+        <span class="attention-strip-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+        </span>
+        <span>
+            <span class="attention-strip-title">@Model.PendingManualReviews contrôles manuels en attente</span>
+            <p class="attention-strip-desc">Des vérifications nécessitent une décision du contrôleur.</p>
+        </span>
+        <a asp-controller="Verifications" asp-action="History" class="btn btn-sm btn-outline-secondary">Voir l'historique</a>
+    </div>
+}
+else
+{
+    <div class="alert alert-success small" role="alert">Aucune vérification en attente de contrôle manuel.</div>
+}
+
+<div class="row admin-grid">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>
+                    <h2 class="h6 mb-0">Utilisateurs et rôles</h2>
+                    <span class="admin-card-count">@Model.TotalUsers compte(s) — @Model.ActiveUsers actifs · @Model.InactiveUsers inactifs</span>
+                </div>
+                <a asp-controller="Admin" asp-action="Users" class="btn btn-sm btn-outline-secondary">Voir les utilisateurs</a>
+            </div>
+            <div class="card-body">
+                @if (Model.Roles.Any())
+                {
+                    <div>
+                        @foreach (var role in Model.Roles)
+                        {
+                            <div class="role-row">
+                                <div>
+                                    <div><strong>@role.Name</strong></div>
+                                    @if (!string.IsNullOrWhiteSpace(role.Description))
+                                    {
+                                        <small class="text-muted">@role.Description</small>
+                                    }
+                                </div>
+                                <span class="badge bg-light text-dark border rounded-pill text-nowrap">@role.UserCount utilisateur(s)</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted mb-0">Aucun rôle enregistré.</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>
+                    <h2 class="h6 mb-0">Signatures de référence</h2>
+                    <span class="admin-card-count">Référentiel de comparaison</span>
+                </div>
+                <a asp-controller="ReferenceSignatures" asp-action="Index" class="btn btn-sm btn-outline-secondary">Voir les signatures</a>
+            </div>
+            <div class="card-body">
+                <div class="admin-count-row">
+                    <span class="admin-count-big">@Model.TotalReferenceSignatures</span>
+                    <span class="text-muted">signatures enregistrées</span>
+                </div>
+                <p class="text-muted mb-0">@Model.ActiveReferenceSignatures actives</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <h2 class="h6 mb-0">Politique de vérification</h2>
+                <span class="policy-readonly">Configuration en lecture seule</span>
+            </div>
+            <div class="card-body">
+                <dl class="row mb-3 policy-dl">
+                    <dt class="col-sm-6">Seuil bas</dt>
+                    <dd class="col-sm-6">@Model.LowerThreshold.ToString("0.0000")</dd>
+                    <dt class="col-sm-6">Seuil haut</dt>
+                    <dd class="col-sm-6">@Model.UpperThreshold.ToString("0.0000")</dd>
+                    <dt class="col-sm-6">Modèle</dt>
+                    <dd class="col-sm-6">@Model.ModelName</dd>
+                    <dt class="col-sm-6">Version</dt>
+                    <dd class="col-sm-6">@Model.ModelVersion</dd>
+                </dl>
+                <div class="policy-bands" aria-label="Règle de décision appliquée">
+                    <div class="policy-band">
+                        <span class="policy-band-range">≤ @lowPct&nbsp;%</span>
+                        <span class="badge bg-danger">Non conforme</span>
+                    </div>
+                    <div class="policy-band">
+                        <span class="policy-band-range">@lowPct – @highPct&nbsp;%</span>
+                        <span class="badge bg-warning text-dark">Contrôle manuel</span>
+                    </div>
+                    <div class="policy-band">
+                        <span class="policy-band-range">≥ @highPct&nbsp;%</span>
+                        <span class="badge bg-success">Conforme</span>
+                    </div>
+                </div>
+                <p class="app-meta small mb-0">Règle appliquée : Conforme si le score &#8805; seuil haut · Contrôle manuel entre les seuils · Non conforme si le score &#8804; seuil bas. Paramétrage expérimental — sans certification bancaire.</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6 mb-4">
+        <div class="card h-100">
+            <div class="card-header bg-white d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <div>
+                    <h2 class="h6 mb-0">Journal d'audit</h2>
+                    <span class="admin-card-count">@Model.TotalAuditLogs événement(s) — activité récente</span>
+                </div>
+                <a asp-controller="Admin" asp-action="Audit" class="btn btn-sm btn-outline-secondary">Voir le journal complet</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Utilisateur</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.RecentAuditLogs.Any())
+                        {
+                            foreach (var a in Model.RecentAuditLogs)
+                            {
+                                <tr>
+                                    <td class="audit-preview-date">@a.CreatedAt.ToString("g")</td>
+                                    <td class="audit-preview-user">@(a.UserName ?? "—")</td>
+                                    <td>@AuditActionLabels.Label(a.Action)</td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="3" class="app-empty">Aucune activité enregistrée.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>

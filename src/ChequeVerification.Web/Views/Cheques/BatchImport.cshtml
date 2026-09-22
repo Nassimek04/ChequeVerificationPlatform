@@ -1,0 +1,29 @@
+@model ChequeVerification.Web.ViewModels.Cheques.BatchImportUploadViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Importer des chèques";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Importer des chèques", Subtitle = "Sélectionnez plusieurs images : analyse OCR, rapprochement du compte client, prévisualisation puis confirmation." }' />
+
+<form asp-action="BatchImport" method="post" enctype="multipart/form-data">
+    @Html.AntiForgeryToken()
+    <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+    <div class="card mb-4">
+        <div class="card-header">Images des chèques (maximum 10)</div>
+        <div class="card-body">
+            <div class="mb-0">
+                <label class="form-label" for="batchFiles">Fichiers</label>
+                <input id="batchFiles" name="Files" class="form-control" type="file" multiple
+                       accept=".jpg,.jpeg,.png,image/jpeg,image/png" />
+                <div class="form-text">Formats acceptés : .jpg, .jpeg, .png — 10 Mo maximum par image, 10 images maximum par lot.</div>
+            </div>
+        </div>
+    </div>
+
+    <div class="d-flex gap-2">
+        <button type="submit" class="btn btn-primary">Analyser</button>
+        <a asp-action="Index" class="btn btn-outline-secondary">Annuler</a>
+    </div>
+</form>

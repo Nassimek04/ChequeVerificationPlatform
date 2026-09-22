@@ -1,0 +1,184 @@
+@model ChequeVerification.Web.ViewModels.ManualReviews.ManualReviewDetailsViewModel
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = $"Contrôle manuel — vérification #{Model.VerificationId}";
+    var headerActions = $"<a class=\"btn btn-outline-secondary\" href=\"{Url.Action("Queue", "ManualReviews")}\">Contrôles manuels</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Title = "Contrôle manuel — vérification #" + Model.VerificationId, Subtitle = "Chèque " + Model.ChequeNumber + " — " + Model.CustomerFullName + " (" + Model.CustomerNumber + ")", ActionsHtml = headerActions }' />
+
+@if (TempData["Error"] != null)
+{
+    <div class="alert alert-danger" role="alert">@TempData["Error"]</div>
+}
+
+<div class="alert alert-warning" role="alert">
+    <strong>Cette vérification nécessite une décision du contrôleur.</strong>
+    Le score de similarité <strong>@Model.SimilarityScore.ToString("P1")</strong> se situe dans la zone d'incertitude : la décision automatique est <strong>Contrôle manuel</strong>.
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Résultat automatique</div>
+    <div class="card-body">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div>
+                <div class="kpi-label">Score de similarité</div>
+                <div class="kpi-value score-value">@Model.SimilarityScore.ToString("P1")</div>
+            </div>
+            <div>
+                <div class="kpi-label">Décision automatique</div>
+                <div><span class="badge bg-warning text-dark">Contrôle manuel</span></div>
+            </div>
+            <div>
+                <div class="kpi-label">Vérifié le</div>
+                <div>@Model.VerifiedAt.ToString("g")</div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Chèque — @Model.ChequeNumber</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Client</dt>
+                    <dd class="col-sm-8">@Model.CustomerFullName (@Model.CustomerNumber) — Compte @Model.AccountNumber <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId">Détails client</a></dd>
+                    <dt class="col-sm-4">Montant / Date</dt>
+                    <dd class="col-sm-8">@CurrencyDisplayHelper.FormatMad(Model.Amount) / @(Model.IssueDate?.ToString("d") ?? "—")</dd>
+                    <dt class="col-sm-4">Statut chèque</dt>
+                    <dd class="col-sm-8"><span class="badge @StatusDisplayHelper.ChequeStatusBadge(Model.ChequeStatus)">@StatusDisplayHelper.ChequeStatusLabel(Model.ChequeStatus)</span></dd>
+                </dl>
+                @if (Model.ChequeImageIsAccessible)
+                {
+                    <div class="mt-3 text-center">
+                        <img src="@Model.ChequeImagePath" alt="Image du chèque @Model.ChequeNumber" class="img-fluid img-preview" />
+                    </div>
+                }
+                else
+                {
+                    <partial name="_EmptyState" model='"Image du chèque indisponible sur le serveur."' />
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Signature extraite</div>
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                @if (Model.ExtractedSignatureIsAccessible && !string.IsNullOrEmpty(Model.ExtractedSignatureImagePath))
+                {
+                    <img src="@Model.ExtractedSignatureImagePath" alt="Signature extraite du chèque @Model.ChequeNumber" class="img-fluid img-preview align-self-center" />
+                    <div class="mt-2 small text-muted">Confiance d'extraction (technique) : @(Model.ExtractionConfidence?.ToString("P1") ?? "—")</div>
+                }
+                else
+                {
+                    <partial name="_EmptyState" model='"Signature extraite indisponible."' />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Signatures de référence comparées (@Model.References.Count)</div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>Référence</th>
+                    <th class="num">Similarité</th>
+                    <th>Meilleure correspondance</th>
+                    <th>Aperçu</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.References)
+                {
+                    <tr class="@(r.IsBestMatch ? "table-warning" : "")">
+                        <td class="text-secondary-info">#@r.ReferenceSignatureId <span class="small">(@r.CreatedAt.ToString("g"))</span></td>
+                        <td class="num"><span class="badge @(r.IsBestMatch ? "bg-warning text-dark" : "bg-light text-dark")">@r.SimilarityScore.ToString("P1")</span></td>
+                        <td>
+                            @if (r.IsBestMatch)
+                            {
+                                <span class="badge bg-success">Oui — meilleure</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-light text-dark">Non</span>
+                            }
+                        </td>
+                        <td>
+                            @if (r.ImageIsAccessible)
+                            {
+                                <img src="@r.ImagePath" alt="Signature de référence #@r.ReferenceSignatureId" class="img-thumb" />
+                            }
+                            else
+                            {
+                                <span class="text-muted">Indisponible</span>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    <div class="card-footer text-muted small">Les similarités affichées sont les valeurs enregistrées lors de la vérification. Aucun recalcul n'est effectué sur cette page.</div>
+</div>
+
+<div class="card border-warning">
+    <div class="card-header bg-warning text-dark">Décision du contrôleur</div>
+    <div class="card-body">
+        <p class="text-muted small mb-3">Cette décision est définitive : elle clôt le contrôle manuel et sera conservée avec votre commentaire dans la piste d'audit.</p>
+        <form asp-controller="ManualReviews" asp-action="Decide" method="post">
+            @Html.AntiForgeryToken()
+            <input type="hidden" asp-for="Decision.VerificationId" />
+            <div asp-validation-summary="ModelOnly" class="text-danger mb-3"></div>
+
+            <div class="mb-3">
+                <span class="form-label d-block">Décision finale <span class="text-danger" aria-hidden="true">*</span></span>
+                @if (Model.Decision.FinalDecision == 1 || Model.Decision.FinalDecision == 2)
+                {
+                    <p class="small mb-2">Décision saisie précédemment : <strong>@(Model.Decision.FinalDecision == 1 ? "Conforme" : "Non conforme")</strong> — confirmez-la à nouveau ci-dessous.</p>
+                }
+                <span asp-validation-for="Decision.FinalDecision" class="text-danger"></span>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Decision.ReviewerComment" class="form-label">Commentaire du contrôleur <span class="text-danger" aria-hidden="true">*</span></label>
+                <textarea asp-for="Decision.ReviewerComment" class="form-control" rows="3" placeholder="Justification du contrôle manuel (5 à 1000 caractères)"></textarea>
+                <span asp-validation-for="Decision.ReviewerComment" class="text-danger"></span>
+                <div class="form-text">Ce commentaire sera conservé dans la piste d'audit.</div>
+            </div>
+
+            <div class="d-flex gap-2 flex-wrap">
+                <button type="submit" name="Decision.FinalDecision" value="1" class="btn btn-success">Valider comme conforme</button>
+                <button type="submit" name="Decision.FinalDecision" value="2" class="btn btn-danger">Rejeter comme non conforme</button>
+                <a asp-action="Queue" class="btn btn-outline-secondary">Retour aux contrôles</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<details class="app-tech-details mt-4 mb-4">
+    <summary>Détails techniques</summary>
+    <dl class="row mb-0 mt-2">
+        <dt class="col-sm-4">Identifiant vérification</dt>
+        <dd class="col-sm-8">#@Model.VerificationId</dd>
+        <dt class="col-sm-4">Score brut enregistré</dt>
+        <dd class="col-sm-8"><code>@Model.SimilarityScore.ToString("0.0000")</code></dd>
+        <dt class="col-sm-4">Seuils appliqués (L ; U)</dt>
+        <dd class="col-sm-8"><code>@Model.LowerThresholdUsed.ToString("0.0000") ; @Model.UpperThresholdUsed.ToString("0.0000")</code></dd>
+        <dt class="col-sm-4">Modèle enregistré</dt>
+        <dd class="col-sm-8"><code>@(Model.ModelName ?? "—")</code> <span class="text-muted">@(Model.ModelVersion ?? "—")</span></dd>
+        <dt class="col-sm-4">Chemin de l'image</dt>
+        <dd class="col-sm-8"><code class="text-break">@Model.ChequeImagePath</code></dd>
+    </dl>
+    <p class="text-muted small mt-2 mb-0">Valeurs enregistrées au moment de la vérification, affichées telles quelles y compris pour les enregistrements historiques.</p>
+</details>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

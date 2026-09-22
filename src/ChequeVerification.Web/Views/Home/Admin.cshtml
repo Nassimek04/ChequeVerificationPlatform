@@ -1,0 +1,205 @@
+@model ChequeVerification.Web.ViewModels.Dashboard.AdminDashboardViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Tableau de bord";
+    var headerActions = $"<a class=\"btn btn-primary\" href=\"{Url.Action("Index", "Admin")}\">Ouvrir l'administration</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Supervision", Title = "Tableau de bord administrateur", Subtitle = "Vue d\u2019ensemble de l\u2019activité et de la supervision.", ActionsHtml = headerActions }' />
+
+<div class="row">
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Utilisateurs", Value = Model.TotalUsers.ToString(), AccentColor = "#64748b" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Clients", Value = Model.TotalCustomers.ToString(), AccentColor = "#64748b" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Chèques", Value = Model.TotalCheques.ToString(), AccentColor = "#64748b" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Vérifications", Value = Model.TotalVerifications.ToString(), AccentColor = "#64748b" }' />
+</div>
+
+<div class="workspace mb-4">
+    <div class="row g-0">
+        <div class="col-lg-8">
+            <div class="workspace-pad">
+                <h2 class="dash-card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                    Activité des vérifications
+                </h2>
+                <p class="dash-card-meta">Vérifications enregistrées par jour — 14 derniers jours.</p>
+                @if (Model.Activity.Total > 0)
+                {
+                    <div class="dash-chart-activity mt-2">
+                        <canvas data-chart="activity"
+                                data-labels='@Html.Raw(JsonSerializer.Serialize(Model.Activity.Labels))'
+                                data-counts='@Html.Raw(JsonSerializer.Serialize(Model.Activity.Counts))'
+                                role="img" aria-label="Vérifications par jour sur 14 jours"></canvas>
+                    </div>
+                }
+                else
+                {
+                    <p class="dash-empty">Aucune vérification disponible pour cette période.</p>
+                }
+            </div>
+        </div>
+        <div class="col-lg-4 workspace-divider">
+            <div class="workspace-pad">
+                <h2 class="dash-card-title">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21.21 15.89A10 10 0 1 1 8 2.83"/><path d="M22 12A10 10 0 0 0 12 2v10z"/></svg>
+                    Répartition des décisions
+                </h2>
+                <p class="dash-card-meta">Décision effective : finale, sinon automatique.</p>
+                @if (Model.Decisions.Total > 0)
+                {
+                    <div class="dash-chart-donut mt-2">
+                        <canvas data-chart="donut"
+                                data-conforme="@Model.Decisions.Conforme"
+                                data-manuel="@Model.Decisions.ControleManuel"
+                                data-nonconforme="@Model.Decisions.NonConforme"
+                                role="img" aria-label="Répartition des décisions de vérification"></canvas>
+                    </div>
+                    <ul class="dash-legend">
+                        <li><span class="swatch" style="background:#16a34a;" aria-hidden="true"></span><span class="legend-label">Conforme</span><span class="legend-count">@Model.Decisions.Conforme</span></li>
+                        <li><span class="swatch" style="background:#d97706;" aria-hidden="true"></span><span class="legend-label">Contrôle manuel</span><span class="legend-count">@Model.Decisions.ControleManuel</span></li>
+                        <li><span class="swatch" style="background:#c0362c;" aria-hidden="true"></span><span class="legend-label">Non conforme</span><span class="legend-count">@Model.Decisions.NonConforme</span></li>
+                    </ul>
+                }
+                else
+                {
+                    <p class="dash-empty">Aucune décision enregistrée.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="workspace mb-4">
+    <div class="workspace-head">
+        <h2 class="dash-card-title">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+            Analyse opérationnelle
+        </h2>
+        <p class="dash-card-meta">Scores IA face à la politique · position des chèques dans le pipeline.</p>
+    </div>
+    <div class="row g-0">
+        <div class="col-lg-6">
+            <div class="workspace-pad">
+                <h3 class="h6 mb-1">Distribution des scores IA</h3>
+                <p class="dash-card-meta mt-0 mb-2">Regroupés selon les seuils persistés de chaque contrôle.</p>
+                @if (Model.ScoreZones.Total > 0)
+                {
+                    <div class="dist-row">
+                        <span class="dist-label">Zone non conforme</span>
+                        <span class="dist-track"><span class="dist-fill" style="width:@((Model.ScoreZones.ZoneNonConforme * 100.0 / Model.ScoreZones.Total).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;background:#c0362c;"></span></span>
+                        <span class="dist-count">@Model.ScoreZones.ZoneNonConforme</span>
+                    </div>
+                    <div class="dist-row">
+                        <span class="dist-label">Zone de contrôle manuel</span>
+                        <span class="dist-track"><span class="dist-fill" style="width:@((Model.ScoreZones.ZoneManuelle * 100.0 / Model.ScoreZones.Total).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;background:#d97706;"></span></span>
+                        <span class="dist-count">@Model.ScoreZones.ZoneManuelle</span>
+                    </div>
+                    <div class="dist-row">
+                        <span class="dist-label">Zone conforme</span>
+                        <span class="dist-track"><span class="dist-fill" style="width:@((Model.ScoreZones.ZoneConforme * 100.0 / Model.ScoreZones.Total).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;background:#16a34a;"></span></span>
+                        <span class="dist-count">@Model.ScoreZones.ZoneConforme</span>
+                    </div>
+                    <p class="dash-note">Descriptif uniquement — les décisions historiques ne sont pas réinterprétées.</p>
+                }
+                else
+                {
+                    <p class="dash-empty">Aucun score enregistré.</p>
+                }
+            </div>
+        </div>
+        <div class="col-lg-6 workspace-divider">
+            <div class="workspace-pad">
+                <h3 class="h6 mb-1">État des traitements</h3>
+                <p class="dash-card-meta mt-0 mb-2">Position des chèques dans le pipeline.</p>
+                @if (Model.ChequePipeline.Total > 0)
+                {
+                    @foreach (var s in Model.ChequePipeline.Items)
+                    {
+                        <div class="dist-row">
+                            <span class="dist-label">@s.Label</span>
+                            <span class="dist-track"><span class="dist-fill" style="width:@((s.Count * 100.0 / Model.ChequePipeline.Total).ToString("0.0", System.Globalization.CultureInfo.InvariantCulture))%;background:#64748b;"></span></span>
+                            <span class="dist-count">@s.Count</span>
+                        </div>
+                    }
+                }
+                else
+                {
+                    <p class="dash-empty">Aucun chèque enregistré.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="workspace mb-4">
+    <div class="workspace-head d-flex align-items-start justify-content-between gap-3 flex-wrap">
+        <div>
+            <h2 class="dash-card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                Vérifications récentes
+            </h2>
+            <p class="dash-card-meta">Derniers contrôles enregistrés.</p>
+        </div>
+        <a class="dash-card-link" asp-controller="Verifications" asp-action="History">Voir l'historique &rarr;</a>
+    </div>
+    <div class="workspace-pad pt-2">
+        @if (Model.RecentVerifications.Any())
+        {
+            <ul class="recent-list">
+                @foreach (var v in Model.RecentVerifications)
+                {
+                    var effective = v.FinalDecision ?? v.AutomaticDecision;
+                    <li>
+                        <a class="recent-row" asp-controller="Verifications" asp-action="Details" asp-route-id="@v.VerificationId">
+                            <span class="recent-main">
+                                <span class="record-id">@v.ChequeNumber</span>
+                                <span class="record-secondary ms-2">@v.CustomerName · @v.VerifiedAt.ToString("g")</span>
+                            </span>
+                            <span class="recent-side">
+                                <span class="score-chip">@v.SimilarityScore.ToString("P1")</span>
+                                <span class="badge @ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.VerificationDecisionBadge(effective)">@ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.VerificationDecisionLabel(effective)</span>
+                            </span>
+                        </a>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <p class="dash-empty">Aucune vérification enregistrée.</p>
+        }
+    </div>
+</div>
+
+<nav class="supervision-band" aria-label="Supervision">
+    <p class="supervision-band-label">Supervision</p>
+    <div class="supervision-cols">
+        <a class="supervision-link" asp-controller="Admin" asp-action="Users">
+            <span class="admin-action-text">
+                <span class="admin-action-title">Utilisateurs</span><br />
+                <span class="admin-action-desc">Comptes et rôles en lecture seule (@Model.TotalUsers utilisateurs)</span>
+            </span>
+            <span class="admin-action-go" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="supervision-link" asp-controller="Admin" asp-action="Audit">
+            <span class="admin-action-text">
+                <span class="admin-action-title">Journal d'audit</span><br />
+                <span class="admin-action-desc">Traçabilité des opérations enregistrées</span>
+            </span>
+            <span class="admin-action-go" aria-hidden="true">&rarr;</span>
+        </a>
+        <a class="supervision-link" asp-controller="Admin" asp-action="Index">
+            <span class="admin-action-text">
+                <span class="admin-action-title">Administration</span><br />
+                <span class="admin-action-desc">Politique de vérification et supervision du système</span>
+            </span>
+            <span class="admin-action-go" aria-hidden="true">&rarr;</span>
+        </a>
+    </div>
+</nav>
+
+@section Scripts {
+    <script src="~/lib/chart.js/chart.umd.min.js"></script>
+    <script src="~/js/dashboard-charts.js" asp-append-version="true"></script>
+}

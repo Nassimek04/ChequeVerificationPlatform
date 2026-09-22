@@ -1,0 +1,13 @@
+services:
+  paddleocr-worker:
+    build:
+      context: ./ocr-worker
+      dockerfile: Dockerfile
+    ports:
+      - "127.0.0.1:8010:8000"
+    volumes:
+      - ocr-model-cache:/home/worker/.paddlex
+    restart: unless-stopped
+
+volumes:
+  ocr-model-cache:

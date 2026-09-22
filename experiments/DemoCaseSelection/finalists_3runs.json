@@ -1,0 +1,62 @@
+[
+  {
+    "zone": "CONFORME",
+    "probe": 29,
+    "ref": 30,
+    "min": 0.991977,
+    "mean": 0.991977,
+    "max": 0.991977,
+    "decision": "Conforme",
+    "margin": 0.07697699999999996,
+    "stable": true,
+    "k5mean": 0.9937868,
+    "k5dec": "Conforme",
+    "k5scores": [
+      1.0,
+      0.991977,
+      0.990925,
+      0.993366,
+      0.992666
+    ]
+  },
+  {
+    "zone": "MANUEL",
+    "probe": 14,
+    "ref": 16,
+    "min": 0.752744,
+    "mean": 0.752744,
+    "max": 0.752744,
+    "decision": "Controle manuel",
+    "margin": 0.094244,
+    "stable": true,
+    "k5mean": 0.8698454,
+    "k5dec": "Controle manuel",
+    "k5scores": [
+      1.0,
+      0.894318,
+      0.752744,
+      0.879932,
+      0.822233
+    ]
+  },
+  {
+    "zone": "NONCONFORME",
+    "probe": 9,
+    "ref": 44,
+    "min": 0.063476,
+    "mean": 0.063476,
+    "max": 0.063476,
+    "decision": "Non conforme",
+    "margin": 0.595024,
+    "stable": true,
+    "k5mean": 0.06218060000000001,
+    "k5dec": "Non conforme",
+    "k5scores": [
+      0.063476,
+      0.057889,
+      0.04408,
+      0.071082,
+      0.074376
+    ]
+  }
+]

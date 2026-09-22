@@ -1,0 +1,27 @@
+# PaddleOCR Docker Linux Worker — CPU — pinned
+# Python 3.11 chosen: paddlepaddle 3.0.0 officially supports 3.8-3.11 (not 3.13).
+# Linux CPU build is stable; avoids Windows libpaddle.pyd Smart App Control block.
+# Do NOT add torch / cuda.
+
+fastapi==0.115.12
+uvicorn[standard]==0.34.0
+python-multipart==0.0.9
+pydantic==2.11.7
+
+# OpenCV headless variant sufficient for container; paddlex 3.7.2 accepts either.
+# opencv-contrib-python 4.10.0.84 matches paddlex expects; headless avoids GUI deps.
+opencv-contrib-python==4.10.0.84
+numpy==1.26.4
+Pillow==10.4.0
+
+# Paddle stack — CPU only, Linux (3.2.x fixes PIR strides bug in 3.0.0)
+paddlepaddle==3.2.2
+paddleocr==3.7.0
+# paddlex 3.7.2 pulled transitively by paddleocr==3.7.0
+
+# Encoding detection — Windows venv fix preserved on Linux
+chardet==5.2.0
+
+# shapely, pyclipper pulled by paddlex; explicit pin to avoid floating
+shapely==2.0.6
+pyclipper==1.3.0.post6

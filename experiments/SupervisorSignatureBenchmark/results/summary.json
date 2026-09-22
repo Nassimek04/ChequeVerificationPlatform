@@ -1,0 +1,155 @@
+{
+  "signatures": [
+    {
+      "sig_id": "sig_0001",
+      "file": "20260226141441_0001+.jpg",
+      "extraction_success": true,
+      "extraction_quality": 0.8772,
+      "localization_mode": "roi",
+      "bbox": {
+        "x": 585,
+        "y": 187,
+        "width": 417,
+        "height": 225
+      },
+      "mean_similarity": 0.737047,
+      "min_similarity": 0.612959,
+      "max_similarity": 0.798877,
+      "error": ""
+    },
+    {
+      "sig_id": "sig_0003",
+      "file": "20260226141441_0003+.jpg",
+      "extraction_success": true,
+      "extraction_quality": 0.7921,
+      "localization_mode": "roi",
+      "bbox": {
+        "x": 174,
+        "y": 72,
+        "width": 122,
+        "height": 143
+      },
+      "mean_similarity": 0.694803,
+      "min_similarity": 0.488577,
+      "max_similarity": 0.821993,
+      "error": ""
+    },
+    {
+      "sig_id": "sig_0005",
+      "file": "20260226141441_0005+.jpg",
+      "extraction_success": true,
+      "extraction_quality": 0.9102,
+      "localization_mode": "roi",
+      "bbox": {
+        "x": 0,
+        "y": 167,
+        "width": 873,
+        "height": 227
+      },
+      "mean_similarity": 0.724887,
+      "min_similarity": 0.604053,
+      "max_similarity": 0.835921,
+      "error": ""
+    },
+    {
+      "sig_id": "sig_0007",
+      "file": "20260226141441_0007+.jpg",
+      "extraction_success": true,
+      "extraction_quality": 0.961,
+      "localization_mode": "roi",
+      "bbox": {
+        "x": 417,
+        "y": 224,
+        "width": 422,
+        "height": 205
+      },
+      "mean_similarity": 0.759575,
+      "min_similarity": 0.569586,
+      "max_similarity": 0.865487,
+      "error": ""
+    },
+    {
+      "sig_id": "sig_0009",
+      "file": "20260226141441_0009+.jpg",
+      "extraction_success": true,
+      "extraction_quality": 0.7275,
+      "localization_mode": "roi",
+      "bbox": {
+        "x": 581,
+        "y": 212,
+        "width": 239,
+        "height": 185
+      },
+      "mean_similarity": 0.56246,
+      "min_similarity": 0.488577,
+      "max_similarity": 0.612959,
+      "error": ""
+    },
+    {
+      "sig_id": "sig_0011",
+      "file": "20260226141441_0011+.jpg",
+      "extraction_success": true,
+      "extraction_quality": 0.9758,
+      "localization_mode": "roi",
+      "bbox": {
+        "x": 857,
+        "y": 63,
+        "width": 238,
+        "height": 330
+      },
+      "mean_similarity": 0.76377,
+      "min_similarity": 0.562093,
+      "max_similarity": 0.853766,
+      "error": ""
+    },
+    {
+      "sig_id": "sig_0013",
+      "file": "20260226141441_0013+.jpg",
+      "extraction_success": true,
+      "extraction_quality": 0.9786,
+      "localization_mode": "roi",
+      "bbox": {
+        "x": 855,
+        "y": 189,
+        "width": 214,
+        "height": 221
+      },
+      "mean_similarity": 0.771977,
+      "min_similarity": 0.537494,
+      "max_similarity": 0.865487,
+      "error": ""
+    }
+  ],
+  "global": {
+    "n_compared": 7,
+    "n_pairs": 21,
+    "mean_pairwise_similarity": 0.71636,
+    "median_pairwise_similarity": 0.756054,
+    "min_pairwise_similarity": 0.488577,
+    "max_pairwise_similarity": 0.865487
+  },
+  "strongest_pair": {
+    "a": "sig_0007",
+    "b": "sig_0013",
+    "score": 0.865487
+  },
+  "weakest_pair": {
+    "a": "sig_0003",
+    "b": "sig_0009",
+    "score": 0.488577
+  },
+  "highest_consistency_signature": "sig_0013",
+  "lowest_consistency_signature": "sig_0009",
+  "threshold_context_only": {
+    "L": 0.6585,
+    "U": 0.915,
+    "note": "Cheque-to-reference policy values shown for context only; not applied as decisions in this signature-to-signature experiment."
+  },
+  "model": {
+    "name": "sig-verif-ai-v5a",
+    "version": "v5a-phase7",
+    "embedding_dim": 128,
+    "device": "cuda",
+    "checkpoint": "metric_resnet18_v5a.pt"
+  }
+}

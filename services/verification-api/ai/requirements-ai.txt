@@ -1,0 +1,9 @@
+# AI experiment V1 dependencies (isolated venv: C:\Users\nassime khatib\aiv)
+# torch 2.13.0 binaries were blocked by Windows application control on this
+# machine; 2.8.0+cu128 (supports RTX 5070 Ti / sm_120) is the pinned version.
+torch==2.8.0+cu128
+torchvision==0.23.0+cu128
+numpy==2.2.6
+opencv-python-headless==4.14.0.94
+matplotlib>=3.9
+pytest>=8

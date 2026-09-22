@@ -1,0 +1,120 @@
+﻿<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Plateforme de vérification de chèques</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <a class="skip-link" href="#appContent">Aller au contenu</a>
+    @if (User.Identity?.IsAuthenticated == true)
+    {
+        <div class="app-shell">
+            <aside class="app-sidebar" id="appSidebar" aria-label="Navigation principale">
+                <div class="app-sidebar-brand">
+                    <img class="app-sidebar-logo-img" src="~/images/docarchives-logo.png" alt="DocArchives" />
+                    <span class="app-sidebar-brand-divider" aria-hidden="true"></span>
+                    <span class="app-sidebar-brand-text">
+                        <span class="app-sidebar-brand-product">Vérification de chèques</span>
+                        <span class="app-sidebar-brand-sub">Console de contrôle</span>
+                    </span>
+                </div>                @{
+                    var currentController = ViewContext.RouteData.Values["controller"]?.ToString();
+                    var currentAction = ViewContext.RouteData.Values["action"]?.ToString();
+                }
+                <nav class="app-sidebar-nav" aria-label="Sections de l'application">
+                    <p class="app-sidebar-section">Général</p>
+                    <a class="app-sidebar-link @(currentController == "Home" ? "active" : "")" aria-current="@(currentController == "Home" ? "page" : null)" asp-controller="Home" asp-action="Index">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/></svg>Tableau de bord
+                    </a>
+
+                    @if (!User.IsInRole("Administrateur"))
+                    {
+                        <p class="app-sidebar-section">Gestion</p>
+                    }
+                    @if (User.IsInRole("Administrateur"))
+                    {
+                        <p class="app-sidebar-section">Supervision</p>
+                        <a class="app-sidebar-link @(currentController == "Admin" && currentAction == "Index" ? "active" : "")" aria-current="@(currentController == "Admin" && currentAction == "Index" ? "page" : null)" asp-controller="Admin" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Administration</a>
+                        <a class="app-sidebar-link @(currentController == "Admin" && currentAction == "Users" ? "active" : "")" aria-current="@(currentController == "Admin" && currentAction == "Users" ? "page" : null)" asp-controller="Admin" asp-action="Users"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>Utilisateurs</a>
+                        <a class="app-sidebar-link @(currentController == "Admin" && currentAction == "Audit" ? "active" : "")" aria-current="@(currentController == "Admin" && currentAction == "Audit" ? "page" : null)" asp-controller="Admin" asp-action="Audit"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Journaux d'audit</a>
+                        <p class="app-sidebar-section">Opérations</p>
+                        <a class="app-sidebar-link @(currentController == "Customers" ? "active" : "")" aria-current="@(currentController == "Customers" ? "page" : null)" asp-controller="Customers" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Clients</a>
+                        <a class="app-sidebar-link @(currentController == "ReferenceSignatures" ? "active" : "")" aria-current="@(currentController == "ReferenceSignatures" ? "page" : null)" asp-controller="ReferenceSignatures" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Signatures de référence</a>
+                        <a class="app-sidebar-link @(currentController == "Cheques" ? "active" : "")" aria-current="@(currentController == "Cheques" ? "page" : null)" asp-controller="Cheques" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Chèques</a>
+                        <a class="app-sidebar-link @(currentController == "Verifications" && currentAction == "Create" ? "active" : "")" aria-current="@(currentController == "Verifications" && currentAction == "Create" ? "page" : null)" asp-controller="Verifications" asp-action="Create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nouvelle vérification</a>
+                        <a class="app-sidebar-link @((currentAction == "History" || (currentController == "Verifications" && currentAction == "Details")) ? "active" : "")" aria-current="@((currentAction == "History" || (currentController == "Verifications" && currentAction == "Details")) ? "page" : null)" asp-controller="Verifications" asp-action="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Historique des vérifications</a>
+                    }
+                    else if (User.IsInRole("Contrôleur"))
+                    {
+                        <a class="app-sidebar-link @(currentController == "ManualReviews" ? "active" : "")" aria-current="@(currentController == "ManualReviews" ? "page" : null)" asp-controller="ManualReviews" asp-action="Queue">Contrôles manuels</a>
+                        <a class="app-sidebar-link @(currentController == "Verifications" ? "active" : "")" aria-current="@(currentController == "Verifications" ? "page" : null)" asp-controller="Verifications" asp-action="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Historique des vérifications</a>
+                        <a class="app-sidebar-link @(currentController == "Customers" ? "active" : "")" aria-current="@(currentController == "Customers" ? "page" : null)" asp-controller="Customers" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Clients</a>
+                        <a class="app-sidebar-link @(currentController == "ReferenceSignatures" ? "active" : "")" aria-current="@(currentController == "ReferenceSignatures" ? "page" : null)" asp-controller="ReferenceSignatures" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Signatures de référence</a>
+                        <a class="app-sidebar-link @(currentController == "Cheques" ? "active" : "")" aria-current="@(currentController == "Cheques" ? "page" : null)" asp-controller="Cheques" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Chèques</a>
+                    }
+                    else
+                    {
+                        <a class="app-sidebar-link @(currentController == "Customers" ? "active" : "")" aria-current="@(currentController == "Customers" ? "page" : null)" asp-controller="Customers" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>Clients</a>
+                        <a class="app-sidebar-link @(currentController == "ReferenceSignatures" ? "active" : "")" aria-current="@(currentController == "ReferenceSignatures" ? "page" : null)" asp-controller="ReferenceSignatures" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>Signatures de référence</a>
+                        <a class="app-sidebar-link @(currentController == "Cheques" ? "active" : "")" aria-current="@(currentController == "Cheques" ? "page" : null)" asp-controller="Cheques" asp-action="Index"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Chèques</a>
+                        <a class="app-sidebar-link @(currentAction == "Create" ? "active" : "")" aria-current="@(currentAction == "Create" ? "page" : null)" asp-controller="Verifications" asp-action="Create"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/></svg>Nouvelle vérification</a>
+                        <a class="app-sidebar-link @((currentAction == "History" || (currentController == "Verifications" && currentAction == "Details")) ? "active" : "")" aria-current="@((currentAction == "History" || (currentController == "Verifications" && currentAction == "Details")) ? "page" : null)" asp-controller="Verifications" asp-action="History"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>Historique des vérifications</a>
+                    }
+                </nav>
+            </aside>
+            <div class="app-backdrop" id="appBackdrop" aria-hidden="true"></div>
+
+            <div class="app-main">
+                <header class="app-topbar">
+                    <button class="app-sidebar-toggle" id="sidebarToggle" aria-label="Ouvrir le menu de navigation" aria-expanded="false" aria-controls="appSidebar">
+                        <span aria-hidden="true"></span><span aria-hidden="true"></span><span aria-hidden="true"></span>
+                    </button>
+                    <div class="app-topbar-spacer"></div>
+                    @if (User.Identity?.IsAuthenticated == true)
+                    {
+                        <div class="app-user">
+                            <span class="app-user-avatar" id="appUserAvatar" aria-hidden="true">--</span>
+                            <div class="app-user-info">
+                                <span class="app-user-name">@User.Identity.Name</span>
+                                @if (User.IsInRole("Administrateur"))
+                                {
+                                    <span class="app-role-badge">Administrateur</span>
+                                }
+                                else if (User.IsInRole("Contrôleur"))
+                                {
+                                    <span class="app-role-badge">Contrôleur</span>
+                                }
+                                else
+                                {
+                                    <span class="app-role-badge">Utilisateur</span>
+                                }
+                            </div>
+                            <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                <button type="submit" class="btn btn-outline-secondary btn-sm">Déconnexion</button>
+                            </form>
+                        </div>
+                    }
+                </header>
+
+                <main class="app-content" id="appContent" tabindex="-1">
+                    @RenderBody()
+                </main>
+            </div>
+        </div>
+    }
+    else
+    {
+        <main class="app-auth-content">
+            @RenderBody()
+        </main>
+    }
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

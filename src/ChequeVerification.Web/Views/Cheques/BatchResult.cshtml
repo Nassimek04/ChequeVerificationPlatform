@@ -1,0 +1,67 @@
+@model ChequeVerification.Web.ViewModels.Cheques.BatchImportResultViewModel
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Import terminé";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Import terminé", Subtitle = $"Total sélectionné : {Model.TotalSelected} — Importés : {Model.ImportedCount} — Ignorés / invalides : {Model.IgnoredCount}" }' />
+
+@if (Model.ImportedCount > 0)
+{
+    <div class="alert alert-success" role="alert">@Model.ImportedCount chèque(s) importé(s) avec le statut « En attente ».</div>
+}
+@if (Model.IgnoredCount > 0)
+{
+    <div class="alert alert-warning" role="alert">@Model.IgnoredCount ligne(s) ignorée(s) ou invalide(s).</div>
+}
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>N° chèque</th>
+                    <th>Compte</th>
+                    <th>Client</th>
+                    <th>Montant</th>
+                    <th>Résultat</th>
+                    <th><span class="visually-hidden">Action</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.Rows)
+                {
+                    <tr>
+                        <td class="record-id">@(r.ChequeNumber ?? "—")</td>
+                        <td class="record-secondary">@(r.AccountNumber ?? "—")</td>
+                        <td><span class="record-primary">@(r.CustomerFullName ?? "—")</span></td>
+                        <td>@CurrencyDisplayHelper.FormatMad(r.Amount)</td>
+                        <td>
+                            @if (r.Success)
+                            {
+                                <span class="badge bg-success">Importé</span>
+                            }
+                            else
+                            {
+                                <span class="badge bg-warning text-dark">Ignoré</span>
+                            }
+                            <span class="small text-muted ms-1">@r.Message</span>
+                        </td>
+                        <td class="table-actions">
+                            @if (r.Success && r.ChequeId.HasValue)
+                            {
+                                <a asp-action="Details" asp-route-id="@r.ChequeId.Value" class="btn btn-sm btn-outline-secondary">Détails</a>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<div class="d-flex gap-2 mt-3">
+    <a asp-action="Index" class="btn btn-outline-secondary">Retour aux chèques</a>
+    <a asp-action="BatchImport" class="btn btn-primary">Importer d'autres chèques</a>
+</div>

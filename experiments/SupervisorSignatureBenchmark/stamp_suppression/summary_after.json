@@ -1,0 +1,41 @@
+{
+  "usable": [
+    "sig_0001",
+    "sig_0005",
+    "sig_0007",
+    "sig_0009"
+  ],
+  "excluded_unusable": [
+    "sig_0003",
+    "sig_0011",
+    "sig_0013"
+  ],
+  "pairs_after": {
+    "sig_0001-sig_0005": 0.628957,
+    "sig_0001-sig_0007": 0.729527,
+    "sig_0001-sig_0009": 0.779474,
+    "sig_0005-sig_0007": 0.701066,
+    "sig_0005-sig_0009": 0.583233,
+    "sig_0007-sig_0009": 0.76198
+  },
+  "pairs_before": {
+    "sig_0001-sig_0005": 0.715195,
+    "sig_0001-sig_0007": 0.794109,
+    "sig_0001-sig_0009": 0.612959,
+    "sig_0005-sig_0007": 0.835921,
+    "sig_0005-sig_0009": 0.604053,
+    "sig_0007-sig_0009": 0.569586
+  },
+  "global_after": {
+    "mean": 0.697373,
+    "median": 0.715297,
+    "min": 0.583233,
+    "max": 0.779474
+  },
+  "model": {
+    "name": "sig-verif-ai-v5a",
+    "version": "v5a-phase7",
+    "checkpoint": "metric_resnet18_v5a.pt",
+    "device": "cuda"
+  }
+}

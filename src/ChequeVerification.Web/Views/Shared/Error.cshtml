@@ -1,0 +1,15 @@
+﻿@model ChequeVerification.Web.Models.ErrorViewModel
+@{
+    ViewData["Title"] = "Erreur";
+}
+
+<div class="auth-status-card">
+    <span class="auth-status-code">Erreur applicative</span>
+    <h1 class="h4 mb-2">Une erreur est survenue</h1>
+    <p class="text-muted mb-4">Votre demande n'a pas pu être traitée. Veuillez réessayer ou contacter votre administrateur si le problème persiste.</p>
+    @if (Model.ShowRequestId)
+    {
+        <p class="app-meta mb-4">Référence : <code>@Model.RequestId</code></p>
+    }
+    <a class="btn btn-primary" asp-controller="Home" asp-action="Index">Retour à l'accueil</a>
+</div>

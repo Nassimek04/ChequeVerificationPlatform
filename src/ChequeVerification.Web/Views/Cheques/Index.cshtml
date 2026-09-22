@@ -1,0 +1,104 @@
+@model ChequeVerification.Web.ViewModels.Cheques.ChequeListViewModel
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Chèques";
+    var headerActions = (User.IsInRole("Utilisateur") || User.IsInRole("Administrateur"))
+        ? $"<a class=\"btn btn-outline-primary me-2\" href=\"{Url.Action("BatchImport", "Cheques")}\">Importer des chèques</a>"
+          + $"<a class=\"btn btn-primary\" href=\"{Url.Action("Create", "Cheques")}\">Importer un chèque</a>"
+        : null;
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Chèques", Subtitle = "Chèques importés et suivi de leur traitement.", ActionsHtml = headerActions }' />
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+}
+
+<form method="get" asp-action="Index" class="app-search mb-3" role="search">
+    <div class="input-group" style="max-width: 460px;">
+        <label class="visually-hidden" for="chequeSearch">Rechercher un chèque</label>
+        <input type="text" id="chequeSearch" name="search" value="@Model.SearchTerm" class="form-control"
+               placeholder="Rechercher (n° chèque, client, compte...)" />
+        <button type="submit" class="btn btn-outline-secondary">Rechercher</button>
+        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">Réinitialiser</a>
+        }
+    </div>
+</form>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>N° chèque</th>
+                    <th>Client</th>
+                    <th>N° client</th>
+                    <th>Compte</th>
+                    <th>Statut</th>
+                    <th>Importé le</th>
+                    <th>Importé par</th>
+                    <th><span class="visually-hidden">Action</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Cheques.Any())
+                {
+                    foreach (var c in Model.Cheques)
+                    {
+                        <tr>
+                            <td class="record-id">@c.ChequeNumber</td>
+                            <td><span class="record-primary">@c.CustomerFullName</span></td>
+                            <td class="record-secondary">@c.CustomerNumber</td>
+                            <td class="record-secondary">@c.AccountNumber</td>
+                            <td>
+                                <span class="badge @StatusDisplayHelper.ChequeStatusBadge(c.Status)">
+                                    @StatusDisplayHelper.ChequeStatusLabel(c.Status)
+                                </span>
+                            </td>
+                            <td class="cell-date">@c.UploadedAt.ToString("g")</td>
+                            <td>@c.ImportedByFullName</td>
+                            <td class="table-actions">
+                                <a asp-action="Details" asp-route-id="@c.ChequeId" class="btn btn-sm btn-outline-secondary">Détails</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="app-empty">Aucun chèque trouvé.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-3" aria-label="Pagination des chèques">
+        <ul class="pagination">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-search="@Model.SearchTerm" asp-route-page="@(Model.Page - 1)">Précédent</a>
+            </li>
+            @for (int p = 1; p <= Model.TotalPages; p++)
+            {
+                <li class="page-item @(p == Model.Page ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-search="@Model.SearchTerm" asp-route-page="@p">@p</a>
+                </li>
+            }
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-search="@Model.SearchTerm" asp-route-page="@(Model.Page + 1)">Suivant</a>
+            </li>
+        </ul>
+    </nav>
+}
+
+<p class="app-meta mt-2">@Model.TotalCount chèque(s) au total.</p>

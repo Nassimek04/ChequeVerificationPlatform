@@ -1,0 +1,18 @@
+BLIND TEST GROUND TRUTH - DO NOT SHARE BEFORE MANUAL VERIFICATION
+Cheque: BLIND-TEST-001.png
+Writer ID: 30
+Candidate source filename: original_30_14.png
+Candidate full path: C:\Users\nassime khatib\Downloads\archive\CEDAR\CEDAR\30\original_30_14.png
+Candidate type: GENUINE
+Candidate SHA256: 7d62e98afa35249433e00d0ac4521f7ecadbafc1b68eff5355df371a860c2d8d
+References (5 genuine):
+  original_30_15.png SHA256 755a6f03fb9b272d5d7bdcab66bf406fc4f3699766b4980bf9215bb15886a547
+  original_30_10.png SHA256 bd36eb010530842812fd54e1ff16a40587f99ba22b0d6cb10ecde20e8698b024
+  original_30_16.png SHA256 0d7b9d8bf77fc2cd144c97ab8a5fec45b158905e9a94a8477d8ce4a0b77c7762
+  original_30_20.png SHA256 4d70487ac524ffe8c8434e9999904879598702c83d29a0102ec3621d7791cd09
+  original_30_22.png SHA256 2f5f65335d33cc62f30fa6edf7c34a36bd2919ce26c1138e182cbb580438b963
+Random selection details: writer pool 1-55 excluding [2,7,8] -> 52 writers, random.choice -> 30; refs random.sample 5 from 24 originals; candidate 50/50 random.random GENUINE (is_genuine=True); candidate random.choice from remaining genuine; no V5, no threshold, no score-based selection
+Selection time: 2026-09-03 10:41:39
+AI used for candidate selection: NO
+Score-based selection: NO
+Thresholds used: NO (L=0.6585 U=0.9150 not used)

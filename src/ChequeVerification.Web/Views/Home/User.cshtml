@@ -1,0 +1,109 @@
+@model ChequeVerification.Web.ViewModels.Dashboard.UserDashboardViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Tableau de bord";
+    var dashboardActions = $"<a class=\"btn btn-primary\" href=\"{Url.Action("Create", "Verifications")}\">Nouvelle vérification</a>"
+        + $" <a class=\"btn btn-outline-secondary\" href=\"{Url.Action("Create", "Cheques")}\">Importer un chèque</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Tableau de bord", Subtitle = "Suivi des chèques importés, des signatures et des vérifications.", ActionsHtml = dashboardActions }' />
+
+<div class="row">
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Chèques importés", Value = Model.TotalCheques.ToString(), AccentColor = "#2f6fdb" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Vérifications", Value = Model.TotalVerifications.ToString(), AccentColor = "#2f6fdb" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Conformes", Value = Model.ConformeCount.ToString(), AccentColor = "#0d9488" }' />
+    <partial name="_KpiCard" model='new ChequeVerification.Web.ViewModels.Dashboard.KpiCardViewModel { Label = "Contrôle manuel", Value = Model.ManualReviewCount.ToString(), AccentColor = "#f59e0b" }' />
+</div>
+
+<div class="row app-dashboard-grid">
+    <div class="col-lg-5 mb-4">
+        <div class="dash-card h-100">
+            <div class="dash-card-head">
+                <div>
+                    <h2 class="dash-card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                        Activité récente
+                    </h2>
+                    <p class="dash-card-meta">Vérifications par jour — 14 derniers jours.</p>
+                </div>
+            </div>
+            <div class="dash-card-body">
+                @if (Model.Activity.Total > 0)
+                {
+                    <div class="dash-chart-sm">
+                        <canvas data-chart="activity"
+                                data-labels='@Html.Raw(JsonSerializer.Serialize(Model.Activity.Labels))'
+                                data-counts='@Html.Raw(JsonSerializer.Serialize(Model.Activity.Counts))'
+                                role="img" aria-label="Vérifications par jour sur 14 jours"></canvas>
+                    </div>
+                }
+                else
+                {
+                    <p class="dash-empty">Aucune vérification disponible pour cette période.</p>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7 mb-4">
+        <div class="dash-card h-100">
+            <div class="dash-card-head">
+                <div>
+                    <h2 class="dash-card-title">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+                        Vérifications récentes
+                    </h2>
+                    <p class="dash-card-meta">Derniers contrôles enregistrés.</p>
+                </div>
+                <a class="dash-card-link" asp-controller="Verifications" asp-action="History">Voir l'historique &rarr;</a>
+            </div>
+            <div class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead>
+                        <tr>
+                            <th>N° chèque</th>
+                            <th>Client</th>
+                            <th class="num">Score de similarité</th>
+                            <th>Décision</th>
+                            <th>Vérifié le</th>
+                            <th><span class="visually-hidden">Action</span></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @if (Model.LatestVerifications.Any())
+                        {
+                            foreach (var v in Model.LatestVerifications)
+                            {
+                                <tr>
+                                    <td class="record-id">@v.ChequeNumber</td>
+                                    <td><span class="record-primary">@v.CustomerName</span></td>
+                                    <td class="num"><span class="score-chip">@v.SimilarityScore.ToString("P1")</span></td>
+                                    <td>
+                                        <span class="badge @ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.VerificationDecisionBadge(v.FinalDecision ?? v.AutomaticDecision)">
+                                            @ChequeVerification.Web.ViewModels.Dashboard.StatusDisplayHelper.VerificationDecisionLabel(v.FinalDecision ?? v.AutomaticDecision)
+                                        </span>
+                                    </td>
+                                    <td class="cell-date">@v.VerifiedAt.ToString("g")</td>
+                                    <td class="table-actions">
+                                        <a asp-controller="Verifications" asp-action="Details" asp-route-id="@v.VerificationId" class="btn btn-sm btn-outline-secondary">Détails</a>
+                                    </td>
+                                </tr>
+                            }
+                        }
+                        else
+                        {
+                            <tr>
+                                <td colspan="6" class="text-center text-muted py-4">Aucune vérification enregistrée.</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chart.js/chart.umd.min.js"></script>
+    <script src="~/js/dashboard-charts.js" asp-append-version="true"></script>
+}

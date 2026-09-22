@@ -1,0 +1,535 @@
+@model ChequeVerification.Web.ViewModels.Verifications.VerificationDetailsViewModel
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Bilan de vérification";
+    var headerActions = $"<a class=\"btn btn-outline-primary\" href=\"{Url.Action("Details", "Cheques", new { id = Model.ChequeId })}\">Voir le chèque</a>";
+    var effectiveDecision = Model.FinalDecision ?? Model.AutomaticDecision;
+    var zone = Model.SimilarityScore >= Model.UpperThresholdUsed ? "high"
+        : Model.SimilarityScore <= Model.LowerThresholdUsed ? "low" : "mid";
+    var zoneMessage = zone == "high" ? "Forte similarité avec les signatures de référence."
+        : zone == "low" ? "Faible similarité avec les signatures de référence."
+        : "Similarité intermédiaire — contrôle humain requis.";
+    var zoneNote = zone == "high" ? "Le score moyen des 5 comparaisons atteint ou dépasse le seuil de conformité."
+        : zone == "low" ? "Le score moyen des 5 comparaisons est inférieur au seuil de conformité."
+        : "Le score moyen des 5 comparaisons se situe entre les seuils : un contrôleur doit trancher.";
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var scorePct = ((double)Model.SimilarityScore * 100.0).ToString("0.0", inv);
+    var lowPct = ((double)Model.LowerThresholdUsed * 100.0).ToString("0.0", inv);
+    var highPct = ((double)Model.UpperThresholdUsed * 100.0).ToString("0.0", inv);
+}
+
+@if (User.IsInRole("Contrôleur"))
+{
+    <a asp-action="History" class="btn btn-link btn-sm text-decoration-none px-0 mb-2">&larr; Retour à l'historique</a>
+}
+else
+{
+    <a asp-action="Create" class="btn btn-link btn-sm text-decoration-none px-0 mb-2">&larr; Retour à la vérification</a>
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Contrôle", Title = "Bilan de vérification #" + Model.VerificationId, Subtitle = "Chèque " + Model.ChequeNumber + " — " + Model.CustomerFullName + " (" + Model.CustomerNumber + ")", ActionsHtml = headerActions }' />
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success" role="alert">@TempData["Success"]</div>
+}
+
+<div class="card mb-4 result-hero result-@zone">
+    <div class="card-body">
+        <p class="result-eyebrow">Résultat de la vérification</p>
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="result-score">@Model.SimilarityScore.ToString("P1")</div>
+            <div>
+                <div><span class="badge @StatusDisplayHelper.VerificationDecisionBadge(effectiveDecision) result-decision">@StatusDisplayHelper.VerificationDecisionLabel(effectiveDecision)</span></div>
+                <div class="result-message">@zoneMessage</div>
+            </div>
+            <div class="ms-lg-auto text-lg-end">
+                <div class="kpi-label">Vérifié le</div>
+                <div class="cell-date">@Model.VerifiedAt.ToString("g")</div>
+                <div class="app-meta small mt-1">Décision auto : @StatusDisplayHelper.VerificationDecisionLabel(Model.AutomaticDecision)@(Model.FinalDecision.HasValue ? $" · Finale : {StatusDisplayHelper.VerificationDecisionLabel(Model.FinalDecision)}" : " · Finale : en attente")</div>
+            </div>
+        </div>
+        <p class="app-meta small mb-0 mt-2">@zoneNote</p>
+        @if (Model.RequiresManualReview)
+        {
+            <div class="alert alert-warning small mb-0 mt-2" role="alert">
+                Le score se situe dans la zone d'incertitude. Cette vérification nécessite un contrôle manuel avant décision finale.
+            </div>
+        }
+        @if (Model.FinalDecision.HasValue)
+        {
+            @if (!string.IsNullOrWhiteSpace(Model.ReviewedByName) || !string.IsNullOrWhiteSpace(Model.ReviewerComment))
+            {
+                <dl class="row mb-0 mt-3">
+                    <dt class="col-sm-4">Contrôlé par</dt>
+                    <dd class="col-sm-8">@(Model.ReviewedByName ?? "—")</dd>
+                    <dt class="col-sm-4">Commentaire du contrôleur</dt>
+                    <dd class="col-sm-8">@(Model.ReviewerComment ?? "—")</dd>
+                </dl>
+            }
+            else
+            {
+                <p class="app-meta small mb-0 mt-3">Décision automatique — aucun contrôle manuel requis.</p>
+            }
+        }
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-body py-3">
+        <ol class="wf-rail wf-rail-5 mb-0" aria-label="Étapes exécutées automatiquement par le système">
+            <li class="done"><span class="wf-node" aria-hidden="true">✓</span><span class="wf-label">Sélection<small>@Model.ChequeNumber</small></span></li>
+            <li class="done"><span class="wf-node" aria-hidden="true">✓</span><span class="wf-label">Analyse<small>Image + OCR</small></span></li>
+            <li class="done"><span class="wf-node" aria-hidden="true">✓</span><span class="wf-label">Extraction<small>OpenCV V2.4</small></span></li>
+            <li class="done"><span class="wf-node" aria-hidden="true">✓</span><span class="wf-label">Comparaison<small>K = 5 références</small></span></li>
+            <li class="done"><span class="wf-node" aria-hidden="true">✓</span><span class="wf-label">Décision<small>Conforme / Manuel / Non conforme</small></span></li>
+        </ol>
+        <p class="app-meta small mb-0 mt-2">Vérification exécutée automatiquement : analyse → extraction → comparaison → décision.</p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+        <span><span class="step-eyebrow">1</span> — Analyse du chèque</span>
+        @if (Model.Ocr?.Success == true)
+        {
+            <span class="badge bg-success">OCR terminée</span>
+        }
+        else
+        {
+            <span class="badge bg-light text-dark border">OCR diagnostique</span>
+        }
+    </div>
+    <div class="card-body">
+        @if (Model.Ocr?.Success == true)
+        {
+            var ocr = Model.Ocr;
+            <dl class="ocr-fields mb-0 small">
+                <div><dt>Numéro détecté</dt><dd>@(ocr.Fields.ChequeNumber ?? "Non identifié")</dd></div>
+                <div><dt>Date détectée</dt><dd>@(ocr.Fields.Date ?? "Non identifiée")</dd></div>
+                <div><dt>Montant détecté</dt><dd>@(!string.IsNullOrWhiteSpace(ocr.Fields.AmountNumeric) ? ocr.Fields.AmountNumeric + " MAD" : ocr.Fields.AmountText ?? "Non identifié")</dd></div>
+                <div><dt>Compte détecté</dt><dd>@(ocr.Fields.AccountNumber ?? "Non identifié")</dd></div>
+            </dl>
+            <details class="app-tech-details ocr-recognized-details mt-3">
+                <summary>Voir les éléments reconnus (@ocr.Lines.Count)</summary>
+                <div class="ocr-diagnostic-surface mt-3">
+                    <h4 class="h6">Texte reconnu</h4>
+                    <pre class="ocr-full-text bg-light border rounded p-3">@(string.IsNullOrWhiteSpace(ocr.FullText) ? "— aucun texte détecté —" : ocr.FullText)</pre>
+                    @if (ocr.Lines.Any())
+                    {
+                        <div class="table-responsive ocr-token-scroll mt-3" tabindex="0" role="region" aria-label="Éléments OCR reconnus et niveaux de confiance">
+                            <table class="table table-sm table-hover align-middle mb-0">
+                                <thead>
+                                    <tr><th>#</th><th>Texte</th><th>Confiance</th></tr>
+                                </thead>
+                                <tbody>
+                                    @for (int i = 0; i < ocr.Lines.Count; i++)
+                                    {
+                                        var line = ocr.Lines[i];
+                                        <tr>
+                                            <td>@(i + 1)</td>
+                                            <td>@line.Text</td>
+                                            <td><span class="badge bg-light text-dark">@line.Confidence.ToString("0.000")</span></td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                    }
+                </div>
+            </details>
+        }
+        else
+        {
+            <p class="app-meta small mb-0">OCR indisponible ou non exécutée pour ce chèque — analyse textuelle diagnostique, sans effet sur la décision de similarité.</p>
+        }
+        <p class="app-meta small mb-0 mt-2">OCR diagnostique, expérimental et non persisté — indépendant de la similarité de signature.</p>
+    </div>
+</div>
+
+<div class="row">
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <span><span class="step-eyebrow">2</span> — Extraction (OpenCV V2.4)</span>
+                @if (Model.ExtractedSignatureImageIsAccessible)
+                {
+                    <span class="badge bg-success">Extraction réussie</span>
+                }
+            </div>
+            <div class="card-body">
+                @if (Model.ExtractedSignatureImageIsAccessible)
+                {
+                    var diag = Model.ExtractionDiagnostic;
+                    <figure class="evidence-frame mb-0">
+                        <img src="@Model.ExtractedSignatureImagePath" alt="Signature extraite du chèque @Model.ChequeNumber" class="img-fluid" />
+                        <figcaption class="text-muted small mt-2">Signature comparée — @Model.ChequeNumber</figcaption>
+                    </figure>
+                    <dl class="row mb-0 mt-3 small">
+                        <dt class="col-sm-6">Qualité technique de l'extraction</dt>
+                        <dd class="col-sm-6"><span class="score-chip">@(Model.ExtractionQuality?.ToString("P1") ?? "—")</span></dd>
+                        <dd class="col-sm-12 text-muted">Indicateur de qualité du recadrage et du contenu extrait ; ce score ne mesure pas l'authenticité de la signature.</dd>
+                        <dt class="col-sm-6">Signature extraite</dt>
+                        <dd class="col-sm-6">@(Model.ExtractedSignatureId.HasValue ? "#" + Model.ExtractedSignatureId.Value : "—")</dd>
+                        <dt class="col-sm-6">Chèque source</dt>
+                        <dd class="col-sm-6">#@Model.ChequeId</dd>
+                        <dt class="col-sm-6">Extraite le</dt>
+                        <dd class="col-sm-6">@(Model.ExtractedAt?.ToString("g") ?? "—")</dd>
+                        <dt class="col-sm-6">Méthode</dt>
+                        <dd class="col-sm-6">Pipeline OpenCV V2.4</dd>
+                        <dt class="col-sm-6">Mode de localisation</dt>
+                        <dd class="col-sm-6">
+                            @(diag?.LocalizationDisplay ?? "ROI du chèque")
+                            @if (diag?.IsGlobalFallback == true)
+                            {
+                                <span class="d-block text-muted">Signature localisée automatiquement hors de la ROI principale.</span>
+                            }
+                        </dd>
+                        @if (diag != null)
+                        {
+                            <dt class="col-sm-6">Résumé de la localisation</dt>
+                            <dd class="col-sm-6">
+                                <ol class="mb-0 ps-3">
+                                    @foreach (var step in diag.LocalizationSummarySteps)
+                                    {
+                                        <li>@step</li>
+                                    }
+                                </ol>
+                            </dd>
+                        }
+                        @if (diag != null)
+                        {
+                            <dt class="col-sm-6">Image analysée <span class="text-muted">(diagnostique)</span></dt>
+                            <dd class="col-sm-6">@diag.OriginalWidth × @diag.OriginalHeight px</dd>
+                            @if (diag.IsGlobalFallback)
+                            {
+                                @if (diag.PrimaryRoiWidth.HasValue && diag.PrimaryRoiHeight.HasValue)
+                                {
+                                    <dt class="col-sm-6">ROI principale tentée <span class="text-muted">(diagnostique)</span></dt>
+                                    <dd class="col-sm-6">x=@(diag.PrimaryRoiX ?? 0), y=@(diag.PrimaryRoiY ?? 0), @diag.PrimaryRoiWidth × @diag.PrimaryRoiHeight</dd>
+                                }
+                                <dt class="col-sm-6">Portée de la recherche globale <span class="text-muted">(diagnostique)</span></dt>
+                                <dd class="col-sm-6">document complet — x=@(diag.RoiX ?? 0), y=@(diag.RoiY ?? 0), @(diag.RoiWidth ?? 0) × @(diag.RoiHeight ?? 0)</dd>
+                            }
+                            else if (diag.RoiWidth.HasValue && diag.RoiHeight.HasValue)
+                            {
+                                <dt class="col-sm-6">Zone sélectionnée <span class="text-muted">(diagnostique)</span></dt>
+                                <dd class="col-sm-6">x=@(diag.RoiX ?? 0), y=@(diag.RoiY ?? 0), @diag.RoiWidth × @diag.RoiHeight</dd>
+                            }
+                            @if (diag.BboxWidth.HasValue && diag.BboxHeight.HasValue)
+                            {
+                                <dt class="col-sm-6">Cadrage final <span class="text-muted">(diagnostique)</span></dt>
+                                <dd class="col-sm-6">x=@(diag.BboxX ?? 0), y=@(diag.BboxY ?? 0), @diag.BboxWidth × @diag.BboxHeight</dd>
+                            }
+                        }
+                    </dl>
+                    @if (diag != null)
+                    {
+                        <details class="app-tech-details mt-3">
+                            <summary>Voir les détails de l'extraction OpenCV</summary>
+                            <div class="ocr-diagnostic-surface mt-3">
+                                <p class="app-meta small mt-0 mb-2">Données diagnostiques recalculées en direct — repères techniques, pas une preuve historique. Seules la signature, la qualité et les références ci-dessus sont persistées.</p>
+                                <ol class="pipeline-stages is-done" aria-label="Étapes du pipeline d'extraction (diagnostic en direct)">
+                                    <li><span aria-hidden="true">✓</span>Décodage OpenCV de l'image — @diag.OriginalWidth × @diag.OriginalHeight px</li>
+                                    @if (diag.IsGlobalFallback)
+                                    {
+                                        <li><span aria-hidden="true">✓</span>ROI principale tentée — @(diag.PrimaryRoiWidth.HasValue ? $"x={diag.PrimaryRoiX ?? 0}, y={diag.PrimaryRoiY ?? 0}, {diag.PrimaryRoiWidth} × {diag.PrimaryRoiHeight}" : "non renseignée") ; recherche globale sur le document complet</li>
+                                    }
+                                    else
+                                    {
+                                        <li><span aria-hidden="true">✓</span>Calcul de la ROI relative — @(diag.RoiWidth.HasValue ? $"x={diag.RoiX ?? 0}, y={diag.RoiY ?? 0}, {diag.RoiWidth} × {diag.RoiHeight}" : "non renseignée")</li>
+                                    }
+                                    <li><span aria-hidden="true">✓</span>Niveaux de gris + flou gaussien</li>
+                                    <li><span aria-hidden="true">✓</span>Otsu + composantes connexes + filtrage MICR — @(diag.TotalComponentCount ?? 0) détectées (@(diag.RetainedComponentCount ?? 0) retenues, @(diag.RejectedComponentCount ?? 0) rejetées, MICR : @(diag.MicrRejectedCount ?? 0))</li>
+                                    <li><span aria-hidden="true">✓</span>Regroupement + noyau dominant + raffinement — @(diag.GroupCount ?? 0) groupes, sélection : @(diag.SelectedGroupIndex.HasValue && diag.SelectedGroupIndex >= 0 ? "groupe #" + diag.SelectedGroupIndex : "aucun")@(diag.RefinedComponentCount.HasValue ? $", {diag.RefinedComponentCount} composante(s) raffinée(s)" : "")</li>
+                                    <li><span aria-hidden="true">✓</span>Continuation directionnelle V2.4 — @(diag.DirectionalAcceptedIndices.Any() ? string.Join(", ", diag.DirectionalAcceptedIndices.Select(i => "#" + i)) : "aucune composante ajoutée")</li>
+                                    <li><span aria-hidden="true">✓</span>Recadrage avec marge — @(diag.BboxWidth.HasValue ? $"x={diag.BboxX ?? 0}, y={diag.BboxY ?? 0}, {diag.BboxWidth} × {diag.BboxHeight}" : "non détecté")</li>
+                                    <li><span aria-hidden="true">✓</span>Encodage PNG + qualité + persistance — @(diag.QualityBase.HasValue && diag.QualityCompletenessFactor.HasValue ? $"base {diag.QualityBase.Value:0.0000} × complétude {diag.QualityCompletenessFactor.Value:0.000}" : "qualité persistée " + (Model.ExtractionQuality?.ToString("P1") ?? "—"))</li>
+                                </ol>
+                                @if (!string.IsNullOrEmpty(diag.SelectionReason))
+                                {
+                                    <p class="app-meta small mt-2 mb-0">Sélection : <code class="text-break small">@diag.SelectionReason</code></p>
+                                }
+                                <p class="app-meta small mt-2 mb-0">
+                                    Localisation : <strong>@diag.LocalizationDisplay</strong>
+                                    @if (diag.IsGlobalFallback)
+                                    {
+                                        <span>
+                                            — @diag.FallbackCandidateCount candidat(s) global(aux),
+                                            sélection : groupe #@diag.FallbackSelectedIndex
+                                            (score @diag.FallbackSelectedScore.ToString("0.0000")),
+                                            recadrage final @(diag.FinalCropWidth)×@(diag.FinalCropHeight) px.
+                                        </span>
+                                        @if (!string.IsNullOrWhiteSpace(diag.RoiFailureReason))
+                                        {
+                                            <span class="d-block">ROI principale écartée : @diag.RoiFailureReason</span>
+                                        }
+                                        @if (!string.IsNullOrWhiteSpace(diag.FallbackSelectionReason))
+                                        {
+                                            <span class="d-block">Sélection globale : <code class="text-break small">@diag.FallbackSelectionReason</code></span>
+                                        }
+                                    }
+                                </p>
+                                @if (diag.FallbackCandidates.Any())
+                                {
+                                    <div class="table-responsive mt-3">
+                                        <table class="table table-sm align-middle mb-0" aria-label="Candidats de la recherche globale">
+                                            <caption class="caption-top">Candidats globaux — score de ressemblance signature, diagnostique uniquement (ne mesure pas l'authenticité).</caption>
+                                            <thead>
+                                                <tr><th>#</th><th>BBox</th><th>L×H</th><th>Allure</th><th>Densité encre</th><th>Composants</th><th>Encre relative</th><th>Étendue verticale</th><th>Score</th><th>Statut</th></tr>
+                                            </thead>
+                                            <tbody>
+                                                @foreach (var c in diag.FallbackCandidates)
+                                                {
+                                                    <tr class="@(c.Selected ? "table-success" : "")">
+                                                        <td>@c.Index</td>
+                                                        <td>x=@(c.BboxX ?? 0), y=@(c.BboxY ?? 0)</td>
+                                                        <td>@c.Width×@c.Height</td>
+                                                        <td>@c.Aspect.ToString("0.00")</td>
+                                                        <td>@c.TrueDensity.ToString("0.000")</td>
+                                                        <td>@c.ComponentCount</td>
+                                                        <td>@c.InkRelative.ToString("0.0000")</td>
+                                                        <td>@c.VerticalExtent.ToString("0.00")</td>
+                                                        <td>@c.Score.ToString("0.0000")</td>
+                                                        <td>@c.Status</td>
+                                                    </tr>
+                                                }
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                }
+                                @if (diag.CropCompleteness != null)
+                                {
+                                    var crop = diag.CropCompleteness;
+                                    <details class="app-tech-details mt-3">
+                                        <summary>Complétude du recadrage</summary>
+                                        <dl class="row small mt-3 mb-0">
+                                            <dt class="col-sm-5">État</dt>
+                                            <dd class="col-sm-7">@crop.Status</dd>
+                                            <dt class="col-sm-5">Cadrage initial</dt>
+                                            <dd class="col-sm-7">x=@(crop.InitialBboxX ?? 0), y=@(crop.InitialBboxY ?? 0), @(crop.InitialBboxWidth ?? 0) × @(crop.InitialBboxHeight ?? 0)</dd>
+                                            <dt class="col-sm-5">Cadrage final</dt>
+                                            <dd class="col-sm-7">x=@(crop.FinalBboxX ?? 0), y=@(crop.FinalBboxY ?? 0), @(crop.FinalBboxWidth ?? 0) × @(crop.FinalBboxHeight ?? 0)</dd>
+                                            <dt class="col-sm-5">Composantes</dt>
+                                            <dd class="col-sm-7">@crop.InitialComponentCount initiale(s), @crop.RecoveredComponentCount récupérée(s) (gauche @crop.RecoveredLeft, droite @crop.RecoveredRight, autre @crop.RecoveredOther)</dd>
+                                            <dt class="col-sm-5">Expansion bornée</dt>
+                                            <dd class="col-sm-7">× @crop.ExpansionRatio.ToString("0.000") en @crop.Iterations itération(s)</dd>
+                                        </dl>
+                                        @if (crop.RecoveredStrokes.Any())
+                                        {
+                                            <ul class="small mb-0 mt-2">
+                                                @foreach (var stroke in crop.RecoveredStrokes)
+                                                {
+                                                    <li>@stroke.Direction : x=@(stroke.BboxX ?? 0), y=@(stroke.BboxY ?? 0), @(stroke.BboxWidth ?? 0) × @(stroke.BboxHeight ?? 0), écarts H=@stroke.HGap px / V=@stroke.VGap px — @stroke.Reason</li>
+                                                }
+                                            </ul>
+                                        }
+                                    </details>
+                                }
+                                <div class="row row-cols-2 row-cols-lg-3 g-2 mt-3 mb-0">
+                                    @if (!string.IsNullOrEmpty(diag.OriginalWithRoiDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.OriginalWithRoiDataUri" alt="Image originale avec ROI et cadrage final" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Image + ROI (étapes 1–2)</figcaption>
+                                        </figure>
+                                    }
+                                    @if (!string.IsNullOrEmpty(diag.RoiImageDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.RoiImageDataUri" alt="Zone candidate analysée" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Zone candidate (étape 2)</figcaption>
+                                        </figure>
+                                    }
+                                    @if (!string.IsNullOrEmpty(diag.MaskImageDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.MaskImageDataUri" alt="Masque binaire de la zone candidate" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Masque binaire (étape 4)</figcaption>
+                                        </figure>
+                                    }
+                                    @if (!string.IsNullOrEmpty(diag.ComponentsImageDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.ComponentsImageDataUri" alt="Composantes retenues" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Retenues (étape 4)</figcaption>
+                                        </figure>
+                                    }
+                                    @if (!string.IsNullOrEmpty(diag.ComponentsRejectedDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.ComponentsRejectedDataUri" alt="Composantes rejetées dont MICR" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Rejetées / MICR (étape 4)</figcaption>
+                                        </figure>
+                                    }
+                                    @if (!string.IsNullOrEmpty(diag.GroupsImageDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.GroupsImageDataUri" alt="Groupes spatiaux détectés" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Groupes (étape 5)</figcaption>
+                                        </figure>
+                                    }
+                                    @if (!string.IsNullOrEmpty(diag.RefinedGroupImageDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.RefinedGroupImageDataUri" alt="Structure raffinée V2.3/V2.4" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Raffinement (étapes 5–6)</figcaption>
+                                        </figure>
+                                    }
+                                    @if (!string.IsNullOrEmpty(diag.FallbackCandidatesDataUri))
+                                    {
+                                        <figure class="mb-0 text-center">
+                                            <img src="@diag.FallbackCandidatesDataUri" alt="Candidats de la recherche globale et région sélectionnée" class="img-fluid border rounded bg-white" style="max-height: 160px;" loading="lazy" />
+                                            <figcaption class="text-muted small mt-1">Recherche globale (secours)</figcaption>
+                                        </figure>
+                                    }
+                                </div>
+                            </div>
+                        </details>
+                    }
+                }
+                else
+                {
+                    <partial name="_EmptyState" model='"Signature extraite indisponible sur le serveur."' />
+                }
+                <p class="mb-0 mt-3"><a href="#cheque-source">Voir le chèque source</a></p>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+                <span><span class="step-eyebrow">3</span> — Comparaison (V5-A, K = 5)</span>
+                <span class="admin-card-count">@Model.ComparedReferenceCount / @Model.ActiveReferenceCount comparées</span>
+            </div>
+            <div class="card-body">
+                @if (Model.Comparisons.Any())
+                {
+                    <ul class="ref-evidence-grid">
+                        @foreach (var c in Model.Comparisons)
+                        {
+                            <li class="ref-evidence-card@(c.IsBestMatch ? " is-best" : "")">
+                                @if (c.ReferenceImageIsAccessible)
+                                {
+                                    <img src="@c.ReferenceImagePath" alt="Signature de référence #@c.ReferenceSignatureId" loading="lazy" />
+                                }
+                                else
+                                {
+                                    <span class="ref-missing">Indisponible</span>
+                                }
+                                <span class="ref-id">Référence #@c.ReferenceSignatureId</span>
+                                <span class="score-chip">@c.SimilarityScore.ToString("P1")</span>
+                                @if (c.IsBestMatch)
+                                {
+                                    <span class="badge bg-success mt-1">Meilleure correspondance</span>
+                                }
+                            </li>
+                        }
+                    </ul>
+                    <p class="dash-note">Le score final correspond à la moyenne des @Model.ComparedReferenceCount comparaisons.</p>
+                }
+                else
+                {
+                    <partial name="_EmptyState" model='"Aucune comparaison enregistrée."' />
+                }
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header"><span class="step-eyebrow">4</span> — Décision : position du score face à la politique</div>
+    <div class="card-body">
+        <div class="threshold-scale" role="img" aria-label="Échelle de 0 à 100 %. Score réel @Model.SimilarityScore.ToString("P1"), seuil bas L @Model.LowerThresholdUsed.ToString("P1"), seuil haut U @Model.UpperThresholdUsed.ToString("P1")">
+            <div class="threshold-score-callout" style="left:@scorePct%;">
+                <span>Score réel</span>
+                <strong>@Model.SimilarityScore.ToString("P1")</strong>
+            </div>
+            <div class="threshold-zones" aria-hidden="true">
+                <span class="threshold-zone zone-low" style="left:0%;width:@lowPct%;"></span>
+                <span class="threshold-zone zone-mid" style="left:@lowPct%;width:@((double.Parse(highPct, inv) - double.Parse(lowPct, inv)).ToString("0.0", inv))%;"></span>
+                <span class="threshold-zone zone-high" style="left:@highPct%;width:@((100.0 - double.Parse(highPct, inv)).ToString("0.0", inv))%;"></span>
+                <span class="threshold-tick" style="left:@lowPct%;"></span>
+                <span class="threshold-tick" style="left:@highPct%;"></span>
+                <span class="threshold-marker" style="left:@scorePct%;"></span>
+            </div>
+            <div class="threshold-labels" aria-hidden="true">
+                <span style="left:0%;width:@lowPct%;">Non conforme</span>
+                <span style="left:@lowPct%;width:@((double.Parse(highPct, inv) - double.Parse(lowPct, inv)).ToString("0.0", inv))%;">Contrôle manuel</span>
+                <span style="left:@highPct%;width:@((100.0 - double.Parse(highPct, inv)).ToString("0.0", inv))%;">Conforme</span>
+            </div>
+            <div class="threshold-values">
+                <span class="threshold-end threshold-start">0 %</span>
+                <span class="threshold-value threshold-low" style="left:@lowPct%;"><strong>L</strong> @Model.LowerThresholdUsed.ToString("P1")</span>
+                <span class="threshold-value threshold-high" style="left:@highPct%;"><strong>U</strong> @Model.UpperThresholdUsed.ToString("P1")</span>
+                <span class="threshold-end threshold-finish">100 %</span>
+            </div>
+        </div>
+        <p class="dash-note">Seuils enregistrés au moment de la vérification — présentation uniquement, aucun recalcul.</p>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">Processus de vérification</div>
+    <div class="card-body">
+        <ol class="pipeline-stages is-done" aria-label="Résumé du processus de vérification réellement exécuté">
+            <li><span aria-hidden="true">@(Model.ChequeImageIsAccessible ? "✓" : "○")</span>Image analysée</li>
+            <li><span aria-hidden="true">@(Model.ExtractedSignatureImageIsAccessible ? "✓" : "○")</span>Signature extraite avec OpenCV V2.4</li>
+            <li><span aria-hidden="true">@(Model.ComparedReferenceCount >= 5 ? "✓" : "○")</span>@Model.ComparedReferenceCount références chargées</li>
+            <li><span aria-hidden="true">@(Model.Comparisons.Any() ? "✓" : "○")</span>Comparaison V5-A exécutée</li>
+            <li><span aria-hidden="true">@(Model.Comparisons.Any() ? "✓" : "○")</span>Score moyen calculé</li>
+            <li><span aria-hidden="true">✓</span>Politique appliquée</li>
+            <li><span aria-hidden="true">✓</span>Décision enregistrée</li>
+        </ol>
+        <p class="app-meta small mb-0 mt-2">OCR : analyse textuelle indépendante et diagnostique — non persistée et non requise pour la décision de similarité.</p>
+    </div>
+</div>
+
+<div class="card mb-4" id="cheque-source">
+    <div class="card-header d-flex justify-content-between align-items-center gap-2 flex-wrap">
+        <span>Chèque source — @Model.ChequeNumber</span>
+        <span class="badge @StatusDisplayHelper.ChequeStatusBadge(Model.ChequeStatus)">@StatusDisplayHelper.ChequeStatusLabel(Model.ChequeStatus)</span>
+    </div>
+    <div class="card-body">
+        <dl class="row mb-0">
+            <dt class="col-sm-3">Client</dt>
+            <dd class="col-sm-9">@Model.CustomerFullName (@Model.CustomerNumber) <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId">Détails client</a></dd>
+        </dl>
+        @if (Model.ChequeImageIsAccessible)
+        {
+            <div class="mt-3">
+                <figure class="evidence-frame mb-0">
+                    <img src="@Model.ChequeImagePath" alt="Image du chèque @Model.ChequeNumber" class="img-fluid" />
+                    <figcaption class="text-muted small mt-2">Document source — @Model.ChequeNumber</figcaption>
+                </figure>
+            </div>
+        }
+        else
+        {
+            <partial name="_EmptyState" model='"Image du chèque indisponible sur le serveur."' />
+        }
+    </div>
+</div>
+
+<details class="app-tech-details mb-4">
+    <summary>Détails techniques</summary>
+    <dl class="row mb-0 mt-2">
+        <dt class="col-sm-4">Identifiant vérification</dt>
+        <dd class="col-sm-8">#@Model.VerificationId</dd>
+        <dt class="col-sm-4">Score brut enregistré</dt>
+        <dd class="col-sm-8"><code>@Model.SimilarityScore.ToString("0.0000")</code></dd>
+        <dt class="col-sm-4">Seuils appliqués (L ; U)</dt>
+        <dd class="col-sm-8"><code>@Model.LowerThresholdUsed.ToString("0.0000") ; @Model.UpperThresholdUsed.ToString("0.0000")</code></dd>
+        <dt class="col-sm-4">Modèle enregistré</dt>
+        <dd class="col-sm-8"><code>@(Model.ModelName ?? "—")</code> <span class="text-muted">@(Model.ModelVersion ?? "—")</span></dd>
+        <dt class="col-sm-4">Chemin de l'image</dt>
+        <dd class="col-sm-8"><code class="text-break">@Model.ChequeImagePath</code></dd>
+        @if (!string.IsNullOrEmpty(Model.ExtractedSignatureImagePath))
+        {
+            <dt class="col-sm-4">Signature extraite</dt>
+            <dd class="col-sm-8"><code class="text-break">@Model.ExtractedSignatureImagePath</code></dd>
+        }
+    </dl>
+    <p class="text-muted small mt-2 mb-0">Valeurs enregistrées au moment de la vérification. Aucun recalcul n'est effectué sur cette page.</p>
+</details>

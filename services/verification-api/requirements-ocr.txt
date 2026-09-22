@@ -1,0 +1,17 @@
+# PaddleOCR cheque OCR runtime (optional, lazy).
+# The FastAPI app starts WITHOUT these; only /api/cheques/ocr requires them.
+# Compatibility audit 2026-08-29:
+# - Python 3.13.15 (venv)
+# - opencv-contrib-python 4.10.0.84 replaces opencv-python-headless 4.14 (same cv2 API, required by paddlex)
+# - numpy 2.2.6 stays (paddleocr 3.7 requires numpy<2.4, satisfied)
+# - torch 2.8.0+cu128 coexists with paddlepaddle 3.0.0 (tested separate imports ok,
+#   combined import via modelscope may hit shm.dll conflict — handled lazily with 503)
+# - Language: fr (fallback en) — French/Latin. Arabic requires separate model, not pretended.
+#
+# Install separately:
+#   pip install -r requirements-ocr.txt
+#
+paddlepaddle==3.0.0
+paddleocr==3.7.0
+# Transitive: paddlex 3.7.2, opencv-contrib-python 4.10.0.84, pandas, shapely, etc.
+# If install fails due to compiler for numpy<2, keep existing numpy 2.2.6 wheel.

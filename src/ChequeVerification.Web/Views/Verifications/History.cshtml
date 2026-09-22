@@ -1,0 +1,79 @@
+@model ChequeVerification.Web.ViewModels.Verifications.VerificationHistoryViewModel
+@using ChequeVerification.Web.ViewModels.Dashboard
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Historique des vérifications";
+    var headerActions = (User.IsInRole("Utilisateur") || User.IsInRole("Administrateur"))
+        ? $"<a class=\"btn btn-primary\" href=\"{Url.Action("Create", "Verifications")}\">Nouvelle vérification</a>"
+        : null;
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Contrôle", Title = "Historique des vérifications", Subtitle = "Résultats enregistrés, décisions et suivi des contrôles.", ActionsHtml = headerActions }' />
+
+<div class="info-strip" role="note">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+    <span>Historique en lecture seule — les résultats affichés correspondent aux données enregistrées lors de chaque vérification.</span>
+</div>
+
+<div class="card">
+    <div class="card-header bg-white">
+        <h2 class="h6 mb-0">Vérifications enregistrées (@Model.Items.Count)</h2>
+    </div>
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>N° chèque</th>
+                    <th>Client</th>
+                    <th class="num">Score</th>
+                    <th>Décision auto</th>
+                    <th>Décision finale</th>
+                    <th>Vérifié le</th>
+                    <th><span class="visually-hidden">Action</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Items.Any())
+                {
+                    foreach (var v in Model.Items)
+                    {
+                        <tr>
+                            <td class="text-secondary-info cell-num">#@v.VerificationId</td>
+                            <td class="record-id">@v.ChequeNumber</td>
+                            <td><span class="record-primary">@v.CustomerFullName</span> <span class="record-secondary">(@v.CustomerNumber)</span></td>
+                            <td class="num"><span class="score-chip">@v.SimilarityScore.ToString("P1")</span></td>
+                            <td>
+                                <span class="badge @StatusDisplayHelper.VerificationDecisionBadge(v.AutomaticDecision)">@StatusDisplayHelper.VerificationDecisionLabel(v.AutomaticDecision)</span>
+                            </td>
+                            <td>
+                                @if (v.FinalDecision.HasValue)
+                                {
+                                    <span class="badge @StatusDisplayHelper.VerificationDecisionBadge(v.FinalDecision)">@StatusDisplayHelper.VerificationDecisionLabel(v.FinalDecision)</span>
+                                    @if (!string.IsNullOrEmpty(v.ReviewedByName))
+                                    {
+                                        <div class="small text-muted">par @v.ReviewedByName</div>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge bg-warning text-dark">En attente</span>
+                                }
+                            </td>
+                            <td class="cell-date">@v.VerifiedAt.ToString("g")</td>
+                            <td class="table-actions">
+                                <a asp-action="Details" asp-route-id="@v.VerificationId" class="btn btn-sm btn-outline-secondary">Détails</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="app-empty">Aucune vérification enregistrée.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>

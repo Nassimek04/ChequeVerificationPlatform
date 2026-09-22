@@ -1,0 +1,18 @@
+BLIND TEST 006 GROUND TRUTH - DO NOT SHARE BEFORE MANUAL VERIFICATION
+Cheque: BLIND-TEST-006.png
+Writer ID: 43
+Candidate source filename: original_43_23.png
+Candidate full path: C:\Users\nassime khatib\Downloads\archive\CEDAR\CEDAR\43\original_43_23.png
+Candidate type: GENUINE
+Candidate SHA256: ba36d5d45bc989b23fad613b037631e0c46f7e9e3996f704889557997a860ffe
+References (5 genuine):
+  original_43_4.png SHA256 4d4a13ca2323f005499b581f921a38ed871655f07ed3b5171852305b1fc9ade1
+  original_43_11.png SHA256 fda47e5eea0eb2c9d12c669a64ff8389ffb1041702849996a9935f044534bee0
+  original_43_19.png SHA256 b92695b127f19cf27303c5426900395e6b63f6f8bdda9f171f953b14578bc4d3
+  original_43_7.png SHA256 954416dacea4257581ac2d1e584eedf26c94bab3349e6f9ea60a70f58c911b4d
+  original_43_18.png SHA256 235cc3b65c08c6fe2db69a22f5174f3e80ac80dc1cf9ab28e0f36c269554be82
+Random selection details: writer pool 1-55 excluding [2,7,8,30,54] -> 50 writers, distinct sample [52, 46, 48, 43, 24]; refs random.sample 5; candidate 50/50 GENUINE via random.random; no V5, no thresholds
+Selection time: 2026-09-03 11:13:49
+AI used for candidate selection: NO
+Score-based selection: NO
+Thresholds used: NO (L=0.6585 U=0.9150 not used)

@@ -1,0 +1,65 @@
+@model ChequeVerification.Web.ViewModels.ReferenceSignatures.ReferenceSignatureDetailsViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Signature de référence";
+    var headerActions = $"<a class=\"btn btn-outline-secondary\" href=\"{Url.Action("Index", "ReferenceSignatures")}\">Retour aux signatures</a>"
+        + $" <a class=\"btn btn-outline-primary\" href=\"{Url.Action("Details", "Customers", new { id = Model.CustomerId })}\">Voir la fiche client</a>";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Signature de référence #" + Model.ReferenceSignatureId, Subtitle = "Client " + Model.CustomerFullName + " (" + Model.CustomerNumber + ")", ActionsHtml = headerActions }' />
+
+<div class="row">
+    <div class="col-lg-5 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Aperçu</div>
+            <div class="card-body text-center d-flex flex-column justify-content-center">
+                @if (Model.ImageIsAccessible)
+                {
+                    <img src="@Model.ImagePath" alt="Signature de référence #@Model.ReferenceSignatureId du client @Model.CustomerFullName" class="img-fluid img-preview align-self-center" />
+                }
+                else
+                {
+                    <partial name="_EmptyState" model='"Aperçu indisponible sur le serveur."' />
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-7 mb-4">
+        <div class="card h-100">
+            <div class="card-header">Informations</div>
+            <div class="card-body">
+                <dl class="row mb-0">
+                    <dt class="col-sm-4">Client associé</dt>
+                    <dd class="col-sm-8">
+                        @Model.CustomerFullName
+                        <a asp-controller="Customers" asp-action="Details" asp-route-id="@Model.CustomerId">(@Model.CustomerNumber)</a>
+                    </dd>
+                    <dt class="col-sm-4">État</dt>
+                    <dd class="col-sm-8">
+                        @if (Model.IsActive)
+                        {
+                            <span class="badge bg-success">Active</span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-secondary">Inactive</span>
+                        }
+                    </dd>
+                    <dt class="col-sm-4">Créée le</dt>
+                    <dd class="col-sm-8">@Model.CreatedAt.ToString("g")</dd>
+                </dl>
+                <details class="app-tech-details mt-3">
+                    <summary>Détails techniques</summary>
+                    <dl class="row mb-0 mt-2">
+                        <dt class="col-sm-4">ID signature</dt>
+                        <dd class="col-sm-8">#@Model.ReferenceSignatureId</dd>
+                        <dt class="col-sm-4">Chemin du fichier</dt>
+                        <dd class="col-sm-8"><code class="text-break">@Model.ImagePath</code></dd>
+                        <dt class="col-sm-4">Empreinte (hash)</dt>
+                        <dd class="col-sm-8"><code class="text-break">@(Model.FileHash ?? "—")</code></dd>
+                    </dl>
+                </details>
+            </div>
+        </div>
+    </div>
+</div>

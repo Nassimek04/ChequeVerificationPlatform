@@ -1,0 +1,95 @@
+@model ChequeVerification.Web.ViewModels.Customers.CustomerListViewModel
+@using ChequeVerification.Web.ViewModels.Shared
+@{
+    ViewData["Title"] = "Clients";
+}
+
+<partial name="_PageHeader" model='new PageHeaderViewModel { Eyebrow = "Opérations", Title = "Clients", Subtitle = "Recherche et consultation des fiches clients." }' />
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        @TempData["Success"]
+        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fermer"></button>
+    </div>
+}
+
+<form method="get" asp-action="Index" class="app-search mb-3" role="search">
+    <div class="input-group" style="max-width: 460px;">
+        <label class="visually-hidden" for="customerSearch">Rechercher un client</label>
+        <input type="text" id="customerSearch" name="search" value="@Model.SearchTerm" class="form-control"
+               placeholder="Rechercher (n°, nom, compte, email, tél...)" />
+        <button type="submit" class="btn btn-outline-secondary">Rechercher</button>
+        @if (!string.IsNullOrWhiteSpace(Model.SearchTerm))
+        {
+            <a asp-action="Index" class="btn btn-outline-secondary">Réinitialiser</a>
+        }
+    </div>
+</form>
+
+<div class="card">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0">
+            <thead>
+                <tr>
+                    <th>N° client</th>
+                    <th>Nom complet</th>
+                    <th>Compte</th>
+                    <th>Email</th>
+                    <th>Téléphone</th>
+                    <th class="num">Chèques</th>
+                    <th class="num">Signatures</th>
+                    <th><span class="visually-hidden">Action</span></th>
+                </tr>
+            </thead>
+            <tbody>
+                @if (Model.Customers.Any())
+                {
+                    foreach (var c in Model.Customers)
+                    {
+                        <tr>
+                            <td class="record-secondary">@c.CustomerNumber</td>
+                            <td><span class="record-primary">@c.FullName</span></td>
+                            <td class="record-secondary">@c.AccountNumber</td>
+                            <td>@(c.Email ?? "—")</td>
+                            <td>@(c.Phone ?? "—")</td>
+                            <td class="num"><span class="badge bg-light text-dark">@c.ChequeCount</span></td>
+                            <td class="num"><span class="badge bg-light text-dark">@c.ReferenceSignatureCount</span></td>
+                            <td class="table-actions">
+                                <a asp-action="Details" asp-route-id="@c.CustomerId" class="btn btn-sm btn-outline-secondary">Détails</a>
+                            </td>
+                        </tr>
+                    }
+                }
+                else
+                {
+                    <tr>
+                        <td colspan="8" class="app-empty">Aucun client trouvé.</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</div>
+
+@if (Model.TotalPages > 1)
+{
+    <nav class="mt-3" aria-label="Pagination des clients">
+        <ul class="pagination">
+            <li class="page-item @(Model.Page <= 1 ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-search="@Model.SearchTerm" asp-route-page="@(Model.Page - 1)">Précédent</a>
+            </li>
+            @for (int p = 1; p <= Model.TotalPages; p++)
+            {
+                <li class="page-item @(p == Model.Page ? "active" : "")">
+                    <a class="page-link" asp-action="Index" asp-route-search="@Model.SearchTerm" asp-route-page="@p">@p</a>
+                </li>
+            }
+            <li class="page-item @(Model.Page >= Model.TotalPages ? "disabled" : "")">
+                <a class="page-link" asp-action="Index" asp-route-search="@Model.SearchTerm" asp-route-page="@(Model.Page + 1)">Suivant</a>
+            </li>
+        </ul>
+    </nav>
+}
+
+<p class="app-meta mt-2">@Model.TotalCount client(s) au total.</p>

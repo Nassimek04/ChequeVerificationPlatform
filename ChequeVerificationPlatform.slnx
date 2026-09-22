@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/ChequeVerification.Web/ChequeVerification.Web.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/ChequeVerification.Web.Tests/ChequeVerification.Web.Tests.csproj" />
+  </Folder>
+</Solution>

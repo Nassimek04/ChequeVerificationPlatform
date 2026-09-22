@@ -1,0 +1,24 @@
+@* Reusable page header: eyebrow + title + optional subtitle + optional actions.
+   Models: PageHeaderViewModel (Eyebrow, Title, Subtitle, Actions as raw HTML is set by caller).
+   Presentation only; later phases may adopt it view by view. *@
+@model ChequeVerification.Web.ViewModels.Shared.PageHeaderViewModel
+
+<div class="page-header d-flex align-items-start justify-content-between gap-3 flex-wrap">
+    <div class="page-header-text">
+        @if (!string.IsNullOrWhiteSpace(Model.Eyebrow))
+        {
+            <p class="page-eyebrow">@Model.Eyebrow</p>
+        }
+        <h1 class="h3 mb-0 page-title">@Model.Title</h1>
+        @if (!string.IsNullOrWhiteSpace(Model.Subtitle))
+        {
+            <p class="page-subtitle">@Model.Subtitle</p>
+        }
+    </div>
+    @if (!string.IsNullOrWhiteSpace(Model.ActionsHtml))
+    {
+        <div class="page-header-actions d-flex gap-2 flex-wrap align-items-center">
+            @Html.Raw(Model.ActionsHtml)
+        </div>
+    }
+</div>
