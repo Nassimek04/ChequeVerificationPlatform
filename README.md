@@ -8,6 +8,7 @@
 ![Docker](https://img.shields.io/badge/Docker-OCR_worker-2496ED?logo=docker&logoColor=white)
 ![SQL Server](https://img.shields.io/badge/SQL_Server-EF_Core-CC2927?logo=microsoftsqlserver&logoColor=white)
 ![Status](https://img.shields.io/badge/status-experimental-orange)
+![CI](https://github.com/Nassimek04/ChequeVerificationPlatform/actions/workflows/ci.yml/badge.svg)
 
 Bank-cheque verification platform combining an **ASP.NET Core web application** with a **Python FastAPI analysis microservice**: cheque OCR (CMC7 + PaddleOCR), experimental signature extraction and comparison (OpenCV baseline + learned Siamese metric), a dual-threshold decision policy with human-in-the-loop manual review, and role-based dashboards.
 

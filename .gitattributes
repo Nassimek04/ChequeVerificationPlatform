@@ -1,0 +1,54 @@
+# Auto-detect text files and normalize line endings to LF in the repo.
+# This stops the "LF will be replaced by CRLF" warnings: Git handles the
+# working-tree conversion per OS from here on.
+* text=auto
+
+# Code, config and docs are text (LF in repo, native checkout)
+*.cs text diff=csharp
+*.csproj text
+*.slnx text
+*.props text
+*.targets text
+*.resx text
+*.cshtml text
+*.py text
+*.md text
+*.json text
+*.yml text
+*.yaml text
+*.xml text
+*.sql text
+*.txt text
+*.html text
+*.css text
+*.js text
+*.config text
+*.ini text
+*.toml text
+*.cfg text
+*.editorconfig text
+*.gitignore text
+*.gitattributes text
+*.dockerfile text
+Dockerfile text
+*.ps1 text
+
+# Binaries must never be line-ending converted
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.bmp binary
+*.tif binary
+*.tiff binary
+*.ico binary
+*.dll binary
+*.exe binary
+*.pdb binary
+*.so binary
+*.dylib binary
+*.onnx binary
+*.pt binary
+*.pth binary
+*.bin binary
+*.zip binary
+*.pdf binary
